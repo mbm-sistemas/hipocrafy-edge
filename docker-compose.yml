@@ -1,0 +1,21 @@
+services:
+  orthanc:
+    image: orthancteam/orthanc:latest
+    ports:
+      - "4242:4242"
+      - "8042:8042"
+    volumes:
+      - orthanc_data:/var/lib/orthanc/db
+      - ./orthanc.json:/etc/orthanc/orthanc.json:ro
+      - ./orthanc-scripts:/etc/orthanc/scripts:ro
+    environment:
+      - STONE_WEB_VIEWER_PLUGIN_ENABLED=true
+      - DICOM_WEB_PLUGIN_ENABLED=true
+      - ORTHANC_EXPLORER_2_ENABLED=true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: always
+
+volumes:
+  orthanc_data:
+

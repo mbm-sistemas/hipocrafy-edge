@@ -1,0 +1,525 @@
+{
+  "ginecologia": {
+    "display_name": "Ginecología y Obstetricia",
+    "focus_areas": [
+      "Útero (morfología, contornos, dimensiones longitudinal, anteroposterior y transversal, ecoestructura del miometrio)",
+      "Endometrio (espesor bi-estratificado en corte longitudinal, regularidad de la línea cavitaria, ecogenicidad)",
+      "Ovarios (volumen bilateral, conteo de folículos antrales, presencia de masas sólidas o quísticas)",
+      "Fondo de saco de Douglas (cuantificación y características del líquido libre)",
+      "Trompas de Falopio (detección de signos de ectasia, hidrosálpinx o piosálpinx)"
+    ],
+    "pathology_signs": [
+      "Miomatosis uterina (localización según clasificación FIGO, dimensiones tridimensionales, signos de degeneración hialina o calcificación)",
+      "Masas anexiales (clasificación según reglas IOTA: tumores uniloculares, multiloculares, sólido-quísticos, proyecciones papilares, sombra acústica)",
+      "Endometriosis y endometriomas (quistes de contenido ecogénico homogéneo difuso tipo 'vidrio esmerilado', adherencias anexiales)",
+      "Embarazo ectópico (anillo tubárico anexial, saco gestacional extrauterino con o sin embrión, líquido libre particulado)",
+      "Hiperplasia o pólipos endometriales (engrosamiento focal o difuso, flujo nutricio pediculado en Doppler color)",
+      "Adenomiosis (asimetría de paredes uterinas, quistes miometriales, estriaciones subendometriales, bordes de interfase imprecisos)"
+    ],
+    "measurements": [
+      "Grosor endometrial en mm (medición perpendicular al eje longitudinal uterino)",
+      "Volumen ovárico mediante fórmula elipsoide simplificada (largo x ancho x alto x 0.523) en centímetros cúbicos (cc)",
+      "Dimensiones uterinas en sus tres ejes cardinales (longitud, espesor y ancho)",
+      "Dimensiones de toda masa o quiste en tres planos ortogonales"
+    ],
+    "red_flags": [
+      "Espesor endometrial mayor a 5 mm en paciente postmenopáusica sintomática (sangrado uterino anormal)",
+      "Masa anexial sólida o multilocular irregular con flujo Doppler color intratumoral de baja resistencia (IOTA score alto)",
+      "Líquido libre ecogénico (hemoperitoneo) en fondo de saco de Douglas asociado a dolor pélvico agudo o sospecha de ectópico"
+    ]
+  },
+  "obstetricia": {
+    "display_name": "Obstetricia (Control Prenatal)",
+    "focus_areas": [
+      "Biometría fetal básica para estimación de peso y edad gestacional",
+      "Morfología fetal sistemática (SNC, cara, columna vertebral, tórax, abdomen y extremidades)",
+      "Placenta (ubicación anterior/posterior/fúndica, relación con el orificio cervical interno, madurez)",
+      "Líquido amniótico (volumen de líquido, evaluación cualitativa y cuantitativa)",
+      "Longitud cervical (evaluación de competencia cervical mediante ecografía transvaginal)",
+      "Flujometría Doppler (arteria umbilical, arteria cerebral media, arterias uterinas)"
+    ],
+    "pathology_signs": [
+      "Restricción del crecimiento intrauterino - RCIU (percentil de peso fetal estimado < 10 con alteración Doppler)",
+      "Placenta previa o de inserción baja (borde placentario a menos de 20 mm del orificio cervical interno)",
+      "Alteraciones del volumen de líquido amniótico (oligoamnios: bolsillo mayor < 2 cm; polihidramnios: bolsillo mayor > 8 cm)",
+      "Acortamiento cervical (longitud del canal cervical < 25 mm antes de la semana 32)",
+      "Malformaciones estructurales fetales (ventriculomegalia, labio leporino, defectos de pared abdominal, espina bífida)",
+      "Desprendimiento prematuro de placenta inserta - DPPNI (hematoma retroplacentario, engrosamiento placentario focal)"
+    ],
+    "measurements": [
+      "Diámetro biparietal (DBP), circunferencia cefálica (CC), circunferencia abdominal (CA) y longitud femoral (LF)",
+      "Bolsillo mayor único (BMU) o índice de líquido amniótico (ILA)",
+      "Longitud cervical por vía transvaginal en milímetros",
+      "Índices Doppler: Índice de pulsatilidad (IP) de la arteria umbilical, ACM y arterias uterinas bilateral"
+    ],
+    "red_flags": [
+      "Bradicardia fetal persistente (< 110 latidos por minuto) o taquicardia fetal (> 180 latidos por minuto)",
+      "Ausencia o reversión del flujo de fin de diástole en la arteria umbilical",
+      "Desprendimiento de placenta visible con hematoma retroplacentario significativo",
+      "Ausencia de movimientos fetales y latido cardíaco fetal (óbito fetal)"
+    ]
+  },
+  "traumatologia": {
+    "display_name": "Traumatología y Ortopedia",
+    "focus_areas": [
+      "Continuidad de la cortical ósea en toda su extensión visible",
+      "Alineación de ejes mecánicos e integridad articular",
+      "Espacios articulares (amplitud, paralelismo de carillas articulares)",
+      "Tejidos blandos periarticulares (edema, hematomas, colecciones líquidas)",
+      "Dispositivos de fijación interna o prótesis (estabilidad, signos de aflojamiento)"
+    ],
+    "pathology_signs": [
+      "Fracturas óseas (trazos simples, conminutos, oblicuos, espiroideos, impactados; grado de desplazamiento y angulación)",
+      "Lesiones osteolíticas u osteoblásticas (bordes definidos vs destructivos, reacción perióstica tipo triángulo de Codman o sol naciente)",
+      "Artrosis y degeneración articular (pinzamiento asimétrico del espacio articular, esclerosis subcondral, geodas, osteofitos marginales)",
+      "Luxaciones y subluxaciones (pérdida parcial o completa de la congruencia anatómica de las superficies articulares)",
+      "Osteomielitis aguda o crónica (secuestros óseos, involucro, fístulas corticales, colecciones subperiósticas)",
+      "Lesiones de tejidos blandos (rupturas tendinosas, derrames articulares, sinovitis reactiva)"
+    ],
+    "measurements": [
+      "Ángulo de Böhler en fracturas de calcáneo (normal 25-40 grados)",
+      "Diástasis o desplazamiento de fragmentos óseos en milímetros",
+      "Amplitud del espacio articular en milímetros (comparativo contralateral)",
+      "Ángulo de inclinación o alineación del eje diafisiario"
+    ],
+    "red_flags": [
+      "Solución de continuidad ósea con gas en tejidos blandos adyacentes (fractura expuesta o fascitis necrotizante)",
+      "Destrucción cortical agresiva con reacción perióstica laminada o espiculada (sugestiva de sarcoma óseo u osteosarcoma)",
+      "Subluxación o luxación articular persistente con sospecha de compromiso neurovascular distal"
+    ]
+  },
+  "cardiologia": {
+    "display_name": "Cardiología",
+    "focus_areas": [
+      "Silueta cardíaca y contorno mediastínico en radiología de tórax",
+      "Cavidades cardíacas y espesor de paredes miocárdicas",
+      "Aparato valvular (morfología, apertura, calcificación de valvas)",
+      "Espacio pericárdico (visualización de hojas visceral y parietal)",
+      "Aorta torácica, cayado y arteria pulmonar (diámetro y contorno)"
+    ],
+    "pathology_signs": [
+      "Cardiomegalia global o a expensas de cavidades izquierdas o derechas",
+      "Derrame pericárdico (espacio anecoico libre de ecos entre las hojas pericárdicas)",
+      "Signos radiológicos de congestión venocapilar pulmonar (redistribución de flujo a campos superiores, edema intersticial, líneas B de Kerley)",
+      "Aneurisma o ectasia de la aorta ascendente o descendente",
+      "Disfunción o calcificación valvular severa (estenosis, insuficiencia con reflujo retrógrado)",
+      "Hipertrofia miocárdica (grosor de pared ventricular izquierda aumentado)"
+    ],
+    "measurements": [
+      "Índice cardiotorácico (ICT) en proyección PA (normal < 0.50 en adultos)",
+      "Diámetro de la aorta ascendente en milímetros",
+      "Espesor del septum interventricular y de la pared posterior del ventrículo izquierdo en diástole",
+      "Fracción de eyección del ventrículo izquierdo (FEVI) estimada por método Simpson si corresponde"
+    ],
+    "red_flags": [
+      "Derrame pericárdico severo con colapso de aurícula derecha o ventrículo derecho en diástole (taponamiento cardíaco)",
+      "Doble luz en la pared aórtica o presencia de flap intimal (disección aórtica aguda)",
+      "Edema agudo de pulmón con patrón alveolar difuso bilateral en 'alas de mariposa'"
+    ]
+  },
+  "neumonologia": {
+    "display_name": "Neumonología",
+    "focus_areas": [
+      "Parénquima pulmonar y espacio alveolar (opacidades, patrón intersticial)",
+      "Mediastino y tráquea (alineación, silueta, presencia de masas o adenopatías)",
+      "Espacio pleural y senos costofrénicos / cardiofrénicos",
+      "Diafragma (morfología de cúpulas, posición y movilidad)",
+      "Estructuras hiliares y vasculatura pulmonar"
+    ],
+    "pathology_signs": [
+      "Consolidaciones alveolares (broncograma aéreo, neumonías segmentarias o lobares)",
+      "Derrame pleural (atenuación o borramiento de senos costofrénicos, signo del menisco)",
+      "Neumotórax (línea de la pleura visceral, colapso pulmonar ipsilateral, ausencia de trama vascular periférica)",
+      "Nódulos o masas pulmonares (solitarios o múltiples, bordes lobulados, espiculados o definidos, presencia de calcificaciones)",
+      "Patrón de vidrio esmerilado o patrón retículo-nodular difuso",
+      "Hiperinsuflación pulmonar (aplanamiento diafragmático, aumento del espacio aéreo retroesternal, EPOC)"
+    ],
+    "measurements": [
+      "Tamaño del nódulo o masa pulmonar en sus ejes mayor y menor en milímetros",
+      "Espesor de la pleura en caso de engrosamiento local",
+      "Altura del diafragma (conteo de arcos costales posteriores visibles, normal 9-10)"
+    ],
+    "red_flags": [
+      "Neumotórax con desviación contralateral de la tráquea y del mediastino (neumotórax a tensión)",
+      "Masa pulmonar espiculada sin calcificaciones asociadas en paciente fumador (sospecha de neoplasia)",
+      "Opacidad alveolar difusa bilateral compatible con distrés respiratorio agudo"
+    ]
+  },
+  "gastroenterologia": {
+    "display_name": "Gastroenterología y Abdomen",
+    "focus_areas": [
+      "Hígado (ecoestructura, regularidad de bordes, ecogenicidad relativa al riñón)",
+      "Vesícula y vía biliar (espesor de pared, contenido intraluminal, colédoco)",
+      "Páncreas (contornos, tamaño, conducto de Wirsung, colecciones retroperitoneales)",
+      "Bazo (diámetro longitudinal, homogeneidad)",
+      "Cavidad peritoneal (espacios declives, corredera parietocólica, espacio hepatorrenal)"
+    ],
+    "pathology_signs": [
+      "Esteatosis hepática (infiltración grasa, atenuación del haz sónico, hepatomegalia)",
+      "Litiasis vesicular (imágenes hiperecogénicas móviles con sombra acústica posterior nítida)",
+      "Colecistitis aguda (engrosamiento de pared >4mm, líquido pericolequístico, Murphy ecográfico positivo)",
+      "Pancreatitis aguda (aumento difuso de tamaño, hipoecogenicidad, colecciones peripancreáticas)",
+      "Esplenomegalia (longitud del bazo aumentada)",
+      "Ascitis o líquido libre intraperitoneal (espacio de Morrison, Douglas, fosas ilíacas)"
+    ],
+    "measurements": [
+      "Diámetro longitudinal hepático en línea medioclavicular (normal < 150 mm)",
+      "Espesor de la pared de la vesícula biliar (normal < 4 mm)",
+      "Diámetro del conducto colédoco (normal < 6-7 mm, hasta 10 mm en post-colecistectomizados)",
+      "Diámetro longitudinal del bazo (normal < 120 mm)"
+    ],
+    "red_flags": [
+      "Líquido libre libre particulado con signos de peritonitis o defensa abdominal (sospecha de perforación de víscera hueca)",
+      "Vesícula de paredes muy engrosadas con gas intramural (colecistitis enfisematosa, urgencia)",
+      "Masa hepática sólida hipervascularizada con lavado rápido en Doppler (sospecha de hepatocarcinoma)"
+    ]
+  },
+  "pediatria": {
+    "display_name": "Pediatría",
+    "focus_areas": [
+      "Estructuras anatómicas adaptadas a la edad cronológica o gestacional",
+      "Líneas de osificación y suturas craneales si aplica",
+      "Timo pediátrico (evaluar tamaño y configuración normal sin confundir con masa mediastínica)",
+      "Caderas lactantes (centraje de la cabeza femoral, cobertura acetabular)",
+      "Abdomen pediátrico (píloro, asas intestinales, invaginaciones)"
+    ],
+    "pathology_signs": [
+      "Estenosis hipertrófica de píloro (alargamiento del canal pilórico y engrosamiento muscular)",
+      "Invaginación o intususcepción intestinal (imagen de 'diana' o 'donut' en corte transversal)",
+      "Displasia del desarrollo de la cadera - DDC (angulación alterada de la línea de Graf)",
+      "Consolidaciones o neumonías de rápida progresión en parénquima pulmonar",
+      "Masas retroperitoneales (sospecha de tumor de Wilms o neuroblastoma)"
+    ],
+    "measurements": [
+      "Grosor muscular pilórico (patológico >= 3-4 mm) y longitud del canal pilórico (patológico >= 15 mm)",
+      "Ángulo alfa de cadera (normal >= 60 grados según clasificación de Graf)",
+      "Diámetro transversal del asa invaginada"
+    ],
+    "red_flags": [
+      "Imagen en diana compatible con invaginación intestinal asociada a sospecha de obstrucción mecánica aguda",
+      "Masa sólida renal o suprarrenal de gran tamaño en paciente pediátrico",
+      "Ausencia de flujo en testículo o anexo ante dolor escrotal agudo (torsión testicular neonatal/infantil)"
+    ]
+  },
+  "oftalmologia": {
+    "display_name": "Oftalmología",
+    "focus_areas": [
+      "Cámara anterior y posterior del globo ocular",
+      "Cristalino (posición, regularidad de su contorno)",
+      "Espacio vítreo (transparencia acústica, presencia de ecos internos)",
+      "Retina y coroides (adhesión a la pared posterior)",
+      "Nervio óptico y vaina nerviosa retroocular"
+    ],
+    "pathology_signs": [
+      "Desprendimiento de retina (membrana ecogénica móvil, anclada a la papila óptica)",
+      "Hemorragia vítrea (ecos de baja amplitud móviles dentro de la cavidad vítrea)",
+      "Catarata u opacidad del cristalino",
+      "Glaucoma crónico (excavación de la cabeza del nervio óptico)",
+      "Melanoma ocular (masa coroidea sólida con excavación acústica asociada)",
+      "Cuerpos extraños intraoculares (imágenes hiperecogénicas con artefacto de cola de cometa o sombra)"
+    ],
+    "measurements": [
+      "Longitud axial del globo ocular en mm (normal 22-24 mm)",
+      "Diámetro de la vaina del nervio óptico (DVO) medido a 3 mm detrás del globo (normal < 5.5-6 mm)",
+      "Grosor coroideo o de la masa si presente"
+    ],
+    "red_flags": [
+      "Membrana desprendida anclada a papila óptica sugestiva de desprendimiento de retina agudo",
+      "Vaina de nervio óptico > 6 mm sugestivo de hipertensión intracraneal de urgencia",
+      "Cuerpo extraño intraocular intraescleral o intravítreo visible"
+    ]
+  },
+  "neurologia": {
+    "display_name": "Neurología y Neurocirugía",
+    "focus_areas": [
+      "Parénquima cerebral y cerebeloso (simetría, diferenciación sustancia gris-blanca)",
+      "Sistema ventricular (ventrículos laterales, tercer y cuarto ventrículo)",
+      "Espacios subaracnoideos, cisternas y surcos cerebrales",
+      "Línea media (desplazamiento o alineación de estructuras)",
+      "Columna vertebral, canal medular e integridad del saco tecal"
+    ],
+    "pathology_signs": [
+      "ACV isquémico agudo/subagudo (hipodensidad, borramiento de surcos, pérdida de diferenciación cortical)",
+      "Hemorragia intracraneal (hiperdensidad intraparenquimatosa, epidural, subdural en forma de semiluna o lente biconvexa)",
+      "Herniación cerebral (desplazamiento de la línea media por masas o edema difuso)",
+      "Hidrocefalia obstructiva o no obstructiva (dilatación ventricular asimétrica)",
+      "Procesos tumorales (lesiones ocupantes de espacio con edema vasogénico periférico y efecto de masa)",
+      "Hemorragia subaracnoidea (hiperdensidad en cisternas de la base y surcos corticales)"
+    ],
+    "measurements": [
+      "Desplazamiento de la línea media en milímetros",
+      "Diámetro ventricular y relación índice de Evans (patológico > 0.30)",
+      "Dimensiones tridimensionales de colecciones hemáticas o tumores"
+    ],
+    "red_flags": [
+      "Desplazamiento de la línea media mayor a 5 mm (riesgo inminente de herniación)",
+      "Hemorragia intracraneal aguda con efecto de masa compresivo sobre ventrículos",
+      "Hemorragia subaracnoidea difusa aguda en cisternas de la base"
+    ]
+  },
+  "urologia": {
+    "display_name": "Urología",
+    "focus_areas": [
+      "Riñones y uréteres proximales y distales",
+      "Vejiga (pared, homogeneidad del lumen, detritos o coágulos)",
+      "Próstata (dimensiones, ecoestructura, regularidad de su cápsula)",
+      "Testículos, epidídimos y bolsas escrotales",
+      "Volumen urinario residual posmiccional"
+    ],
+    "pathology_signs": [
+      "Litiasis renal o ureteral (imágenes con sombra acústica o centelleo Doppler)",
+      "Hidronefrosis (dilatación del sistema pielocalicial clasificada en grados I-IV)",
+      "Hiperplasia prostática benigna (crecimiento glandular con protrusión intravesical)",
+      "Masa renal sólida o compleja (sospecha de carcinoma de células renales, quistes complejos)",
+      "Torsión testicular (ausencia completa de vascularización intratesticular en Doppler color)",
+      "Epididimitis u orquitis (hiperemia marcada en Doppler color, aumento de volumen)"
+    ],
+    "measurements": [
+      "Dimensiones longitudinales de los riñones (normal 100-120 mm)",
+      "Volumen prostático calculado (diámetro longitudinal x transversal x AP x 0.523) en cc",
+      "Volumen vesical pre y posmiccional en mililitros",
+      "Espesor de la pared vesical (normal < 3 mm con vejiga llena)"
+    ],
+    "red_flags": [
+      "Ausencia de flujo Doppler color testicular unilateral en paciente joven con dolor escrotal agudo",
+      "Masa renal sólida hipervascularizada o quiste renal clasificado como Bosniak III o IV",
+      "Hidronefrosis grado IV unilateral o bilateral con adelgazamiento cortical"
+    ]
+  },
+  "dermatologia": {
+    "display_name": "Dermatología",
+    "focus_areas": [
+      "Epidermis, dermis y tejido celular subcutáneo (hipodermis)",
+      "Lesiones cutáneas focales (profundidad, bordes, vascularización Doppler)",
+      "Fascia profunda y estructuras musculares adyacentes",
+      "Cadenas ganglionares de drenaje regional"
+    ],
+    "pathology_signs": [
+      "Melanoma o carcinoma cutáneo (lesiones hipoecoicas dérmicas con neovascularización, invasión profunda)",
+      "Lipomas subcutáneos (lesiones homogéneas, elongadas, paralelas a la piel, hipo o isoecogénicas)",
+      "Quistes epidérmicos (lesiones bien delimitadas con refuerzo acústico, contenido detrítico)",
+      "Abscesos o celulitis (colección líquida con detritos, engrosamiento difuso de hipodermis con patrón lobulillar hipercoico 'empedrado')",
+      "Ganglio linfático regional sospechoso (redondeado, pérdida de hilio graso ecogénico)"
+    ],
+    "measurements": [
+      "Diámetro mayor y espesor máximo de la lesión en milímetros (profundidad Breslow ecográfica)",
+      "Distancia de la lesión al plano fascial profundo en milímetros"
+    ],
+    "red_flags": [
+      "Lesión sólida cutánea con invasión de la fascia profunda o planos musculares",
+      "Presencia de ganglio regional con necrosis central o pérdida total de su hilio",
+      "Celulitis de rápida extensión con presencia de focos de gas (fascitis necrotizante)"
+    ]
+  },
+  "endocrinologia": {
+    "display_name": "Endocrinología",
+    "focus_areas": [
+      "Glándula tiroides (ecogenicidad general, regularidad de bordes, vascularización intraparénquima)",
+      "Nódulos tiroideos individuales (morfología, contornos, ecogenicidad, microcalcificaciones)",
+      "Región paratiroidea (búsqueda de glándulas accesorias aumentadas en planos posteriores)",
+      "Glándulas suprarrenales si visible por ecografía/tomografía"
+    ],
+    "pathology_signs": [
+      "Nódulo tiroideo de sospecha maligna (clasificación TI-RADS 4-5: más alto que ancho, microcalcificaciones, bordes infiltrativos)",
+      "Bocio difuso o multinodular (aumento generalizado de volumen con múltiples nódulos)",
+      "Tiroiditis autoinmune (patrón heterogéneo difuso, hipoecoico, hipervascularizado al Doppler 'infierno tiroideo')",
+      "Adenoma paratiroideo (masa ovalada, marcadamente hipoecoica, posterior a los lóbulos tiroideos)"
+    ],
+    "measurements": [
+      "Volumen del lóbulo tiroideo derecho, izquierdo e istmo en cc",
+      "Dimensiones en tres ejes de los nódulos tiroideos dominantes",
+      "Diámetro de la glándula paratiroides sospechosa"
+    ],
+    "red_flags": [
+      "Nódulo tiroideo clasificado como TI-RADS 5 con adenopatía cervical ipsilateral sospechosa",
+      "Sospecha de masa suprarrenal de gran tamaño (> 4 cm) de características heterogéneas",
+      "Nódulo tiroideo con signos claros de invasión de la cápsula tiroidea o estructuras adyacentes"
+    ]
+  },
+  "otorrinolaringologia": {
+    "display_name": "Otorrinolaringología (ORL)",
+    "focus_areas": [
+      "Glándulas salivales mayores (parótidas, submandibulares; homogeneidad, conducto de Stenon y Wharton)",
+      "Cervical superficial y profundo (cadenas ganglionares cervicales niveles I-VI)",
+      "Laringe y espacio supraglótico (simetría de pliegues vocales)",
+      "Senos paranasales (frontal, maxilares, etmoidales; neumatización)"
+    ],
+    "pathology_signs": [
+      "Sialolitiasis (cálculo intraductal obstructivo con dilatación proximal del conducto salival)",
+      "Tumores salivales (adenoma pleomorfo: lesión lobulada hipoecoica bien definida; carcinoma: infiltrativo)",
+      "Adenopatías metastásicas cervicales (redondas, vascularización periférica o desordenada, necrosis)",
+      "Sinusitis aguda o crónica (nivel hidroaéreo en senos maxilares, engrosamiento mucoso periférico)",
+      "Absceso periamigdalino o retrofaríngeo (colección purulenta profunda con edema)"
+    ],
+    "measurements": [
+      "Eje corto y largo de adenopatías cervicales (patológico eje corto >= 10 mm)",
+      "Dimensiones de masas o litiasis salivales en milímetros",
+      "Espesor de la mucosa sinusal"
+    ],
+    "red_flags": [
+      "Colección líquida con gas en espacios cervicales profundos (riesgo de mediastinitis o compromiso de vía aérea)",
+      "Adenopatía cervical gigante fija de aspecto infiltrativo con necrosis central",
+      "Dilatación ductal salival con sospecha de tumor maligno obstructivo de base de lengua"
+    ]
+  },
+  "reumatologia": {
+    "display_name": "Reumatología",
+    "focus_areas": [
+      "Membrana sinovial y recesos articulares (búsqueda de hipertrofia sinovial)",
+      "Presencia de derrame intraarticular en articulaciones diana",
+      "Entesis (sitio de inserción tendinosa u ósea, ecogenicidad, calcificaciones)",
+      "Perfil de la cortical ósea subyacente (búsqueda de erosiones marginales iniciales)",
+      "Vascularización sinovial evaluada mediante Power Doppler"
+    ],
+    "pathology_signs": [
+      "Sinovitis activa (engrosamiento de la sinovial incompresible con señal Power Doppler positiva)",
+      "Erosiones óseas (interrupción de la cortical ósea visible en dos planos ortogonales)",
+      "Tofos gotosos (depósitos hiperecogénicos heterogéneos con sombra o halo, signo del doble contorno sobre el cartílago)",
+      "Entesopatía inflamatoria (pérdida del patrón fibrilar tendinoso en la inserción, erosión o calcificación)",
+      "Bursitis (distensión líquida de bursas periarticulares subacromial, iliopsoas, etc.)"
+    ],
+    "measurements": [
+      "Espesor de la hipertrofia sinovial en mm",
+      "Profundidad de la erosión cortical en mm",
+      "Grado cualitativo y cuantitativo de señal Power Doppler (escala semicuantitativa 0-3)"
+    ],
+    "red_flags": [
+      "Sinovitis severa con señal Power Doppler grado 3 sugestiva de inflamación muy activa e irreversible",
+      "Tenosinovitis con sospecha de rotura inminente del tendón",
+      "Derrame articular masivo purulento o hemático con sospecha de artritis séptica"
+    ]
+  },
+  "cirugia_vascular": {
+    "display_name": "Cirugía Vascular",
+    "focus_areas": [
+      "Arterias carótidas comunes, internas y externas (placas de ateroma, espesor íntima-media)",
+      "Aorta abdominal (diámetro, trombosis mural, presencia de saco aneurismático)",
+      "Estructuras venosas de miembros inferiores (permeabilidad, compresibilidad, flujo Doppler)",
+      "Estructuras arteriales periféricas (curvas de flujo trifásicas vs bifásicas o monofásicas)",
+      "Fístulas arteriovenosas (diámetro, flujo volumétrico, estenosis anastomóticas)"
+    ],
+    "pathology_signs": [
+      "Trombosis venosa profunda - TVP (vena incompresible, ausencia de flujo al Doppler, trombo intraluminal)",
+      "Estenosis carotídea significativa (placas calcificadas o blandas con aumento de velocidades sistólicas)",
+      "Aneurisma de aorta abdominal - AAA (dilatación focal del diámetro de la aorta >= 30 mm)",
+      "Insuficiencia venosa superficial o profunda (tiempo de reflujo prolongado tras maniobra de Valsalva)",
+      "Isquemia arterial aguda periférica (ausencia de señal Doppler color y espectral en arterias distales)"
+    ],
+    "measurements": [
+      "Diámetro anteroposterior y transversal máximo de la aorta abdominal",
+      "Espesor íntima-media (EIM) carotídeo en mm (normal < 0.9 mm)",
+      "Velocidad sistólica máxima (VSM) y velocidad diastólica final (VDF) en arterias carótidas u obstructivas",
+      "Tiempo de reflujo venoso en milisegundos (patológico >= 500 ms en venas superficiales, >= 1000 ms en venas profundas)"
+    ],
+    "red_flags": [
+      "Trombosis venosa profunda flotante proximal con alto riesgo de embolia pulmonar",
+      "Aneurisma de aorta abdominal con diámetro mayor a 55 mm o crecimiento > 5 mm en 6 meses",
+      "Ausencia de flujo en arterias de miembros inferiores asociada a dolor y palidez (isquemia aguda de miembro)"
+    ]
+  },
+  "nefrologia": {
+    "display_name": "Nefrología",
+    "focus_areas": [
+      "Riñones (dimensiones, espesor cortical, ecogenicidad relativa del parénquima)",
+      "Diferenciación corticomedular (claridad de pirámides renales)",
+      "Sistema colector pielocalicial (diámetro de la pelvis, cálices)",
+      "Arterias y venas renales principales y segmentarias (flujo Doppler e índices de resistencia)",
+      "Vejiga urinaria y volumen de orina residual"
+    ],
+    "pathology_signs": [
+      "Enfermedad renal crónica (riñones pequeños < 90 mm, aumento de ecogenicidad, adelgazamiento cortical)",
+      "Nefropatía aguda (riñones aumentados de tamaño, pirámides prominentes, hiperecogenicidad cortical)",
+      "Nefrolitiasis e hidronefrosis obstructiva",
+      "Quistes renales complejos (Bosniak I-IV: tabiques gruesos, realce, calcificaciones, masa sólida)",
+      "Estenosis de la arteria renal (velocidad sistólica > 200 cm/s, índice de resistencia intraparenquimatoso bajo)"
+    ],
+    "measurements": [
+      "Longitud, ancho y espesor del parénquima renal bilateral",
+      "Espesor de la corteza renal en milímetros (normal >= 10 mm)",
+      "Índice de resistencia (IR) arterial intraparenquimatoso (normal 0.55 - 0.70)",
+      "Diámetro de la pelvis renal en milímetros"
+    ],
+    "red_flags": [
+      "Índice de resistencia renal elevado (> 0.80) en paciente con falla renal aguda de origen no aclarado",
+      "Quiste complejo clasificado como Bosniak IV (lesión quística con componente sólido realzante)",
+      "Obstrucción urinaria bilateral aguda con anuria o elevación brusca de creatinina"
+    ]
+  },
+  "oncologia": {
+    "display_name": "Oncología",
+    "focus_areas": [
+      "Tumor primario (dimensiones, contornos, invasión local de tejidos adyacentes)",
+      "Estaciones ganglionares regionales (búsqueda de adenopatías sospechosas de metástasis)",
+      "Órganos blanco metastásicos (hígado, pulmón, hueso, cerebro, peritoneo)",
+      "Patrón de vascularización del tumor y presencia de necrosis central"
+    ],
+    "pathology_signs": [
+      "Masas sólidas infiltrativas (bordes irregulares, espiculados, halo hipoecoico, flujo caótico Doppler)",
+      "Adenopatías patológicas (eje corto aumentado, forma redondeada, pérdida de hilio graso ecogénico, necrosis)",
+      "Metástasis hepáticas o esplénicas (lesiones en diana o 'ojo de buey', nódulos múltiples de ecogenicidad variable)",
+      "Implantes peritoneales y ascitis tabicada (carcinomatosis peritoneal)",
+      "Destrucción ósea lítica o áreas blásticas sugestivas de metástasis óseas"
+    ],
+    "measurements": [
+      "Diámetro máximo y perpendicular de la lesión diana según criterios RECIST 1.1",
+      "Eje corto de los ganglios linfáticos evaluados en mm",
+      "Volumen tumoral calculado si corresponde"
+    ],
+    "red_flags": [
+      "Masa lítica vertebral con sospecha de compresión medular aguda",
+      "Adenopatía cervical o mediastínica de gran tamaño con sospecha de síndrome de vena cava superior",
+      "Trombosis tumoral intraluminal en vena cava inferior u otra estructura vascular mayor"
+    ]
+  },
+  "medicina_interna": {
+    "display_name": "Medicina Interna",
+    "focus_areas": [
+      "Evaluación multiorgánica sistemática y correlación de sistemas",
+      "Tórax (silueta cardíaca, parénquima pulmonar, derrames pleurales)",
+      "Abdomen superior e inferior (hígado, vesícula, riñones, aorta, bazo)",
+      "Grandes vasos abdominales y cervicales",
+      "Búsqueda de líquido libre o colecciones profundas en cavidades"
+    ],
+    "pathology_signs": [
+      "Hepatoesplenomegalia significativa",
+      "Derrames serosos (derrame pleural unilateral o bilateral, derrame pericárdico, ascitis)",
+      "Signos de congestión sistémica o pulmonar secundaria a falla cardíaca/renal",
+      "Trombosis venosa profunda o trombos intraluminales periféricos",
+      "Adenopatías múltiples generalizadas (descartar linfoma, sarcoidosis, TBC)",
+      "Aneurisma de aorta abdominal o signos de arteriopatía obstructiva"
+    ],
+    "measurements": [
+      "Diámetro longitudinal del hígado y bazo",
+      "Índice cardiotorácico y diámetro de la aorta abdominal",
+      "Cuantificación aproximada de colecciones líquidas o derrames"
+    ],
+    "red_flags": [
+      "Derrame pericárdico moderado a severo asociado a colapso de cavidades derechas",
+      "Ascitis a tensión con compromiso ventilatorio restrictivo",
+      "Signos ecográficos de trombosis venosa profunda proximal aguda"
+    ]
+  },
+  "general": {
+    "display_name": "Radiología General",
+    "focus_areas": [
+      "Estructuras anatómicas principales representadas en el plano de la imagen",
+      "Simetría bilateral, alineación e integridad de tejidos blandos y óseos",
+      "Distribución de densidades o ecogenicidades fisiológicas"
+    ],
+    "pathology_signs": [
+      "Cualquier masa, nódulo o lesión ocupante de espacio sólida o quística",
+      "Colecciones líquidas anormales libres o tabicadas",
+      "Alteraciones focales o difusas del parénquima orgánico",
+      "Imágenes sugestivas de calcificaciones patológicas o gas ectópico"
+    ],
+    "measurements": [
+      "Dimensiones en milímetros de cualquier hallazgo patológico en dos o tres dimensiones",
+      "Distancia de las lesiones a estructuras vasculares o nerviosas vecinas"
+    ],
+    "red_flags": [
+      "Cualquier masa de contornos espiculados o infiltrativos sugestiva de malignidad",
+      "Gas ectópico en localizaciones no habituales (neumoperitoneo, gas en pared vesical o intestinal)",
+      "Colección líquida con niveles hidroaéreos o ecos internos sugestiva de absceso agudo"
+    ]
+  }
+}

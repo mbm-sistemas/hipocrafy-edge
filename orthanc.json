@@ -1,0 +1,43 @@
+{
+  "Name": "Hipocrafy PACS",
+  "DicomAet": "PACS",
+  "DicomPort": 4242,
+  "HttpPort": 8042,
+  "AuthenticationEnabled": false,
+  "RemoteAccessAllowed": true,
+  "DicomCheckCalledAet": false,
+
+  "OrthancExplorer2": {
+    "Enable": true,
+    "IsDefaultUI": true,
+    "UiOptions": {
+      "EnableUpload": true,
+      "EnableDicomModalities": true,
+      "EnableDeleteResources": true,
+      "EnableDownloadZip": true,
+      "EnableSendTo": true,
+      "EnableApiViewMenu": true,
+      "EnableStudyListEmptyStudy": true,
+      "ShowSamePatientStudiesRecent": 10,
+      "EnableOpenInOhifViewer3": false,
+      "EnableOpenInStoneViewer": true,
+      "StoneViewerPublicRoot": "/stone-webviewer/index.html"
+    }
+  },
+
+  "DicomWeb": {
+    "Enable": true,
+    "Root": "/dicom-web/",
+    "EnableWado": true,
+    "WadoRoot": "/wado",
+    "Ssl": false,
+    "StudiesMetadata": "MainDicomTags",
+    "SeriesMetadata": "Full"
+  },
+
+  "StoneWebViewer": {
+    "DicomWebRoot": "/dicom-web/"
+  },
+
+  "StableAge": 10
+}

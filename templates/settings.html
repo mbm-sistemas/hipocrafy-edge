@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración - Hipocrafy Edge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col">
+
+    <nav class="bg-slate-900 text-white shadow-lg shrink-0">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <img src="/static/logo.png" alt="Hipocrafy" class="h-10 rounded-lg bg-white p-0.5" onerror="this.style.display='none'">
+                    <div>
+                        <span class="text-xl font-bold tracking-tight">HIPOCRAFY EDGE</span>
+                        <span class="block text-[10px] uppercase tracking-widest opacity-75">Configuración de Nodo</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 text-sm font-medium">
+                    <a href="/" class="text-slate-300 hover:text-white transition-colors bg-slate-800 px-3.5 py-1.5 rounded-lg border border-slate-700/50">
+                        Volver al Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8 flex-1 w-full">
+        
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-800">Parámetros del Sistema</h1>
+                <p class="text-slate-500 text-sm">Configuración local y conectividad del Gateway Edge</p>
+            </div>
+        </div>
+
+        <form id="settings-form" class="space-y-6">
+            
+            <!-- SECCIÓN 1: IDENTIDAD Y NUBE -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                <h2 class="text-base font-bold text-slate-800 border-b pb-3 mb-4 flex items-center gap-2">
+                    <span class="text-indigo-600">🌐</span> Identidad y Conexión Nube
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Nombre del Equipo (Local)</label>
+                        <input type="text" id="GATEWAY_NAME" value="{{ env_vars.GATEWAY_NAME }}" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Servidor Cloud URL (QAS/Prod)</label>
+                        <input type="url" id="HIPOCRAFY_CLOUD_URL" value="{{ env_vars.HIPOCRAFY_CLOUD_URL }}" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Token de Autenticación Cloud (GATEWAY_API_TOKEN)</label>
+                        <div class="flex gap-2">
+                            <input type="password" id="GATEWAY_API_TOKEN" value="{{ env_vars.GATEWAY_API_TOKEN }}" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all">
+                            <button type="button" onclick="togglePasswordVisibility('GATEWAY_API_TOKEN')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 rounded-lg text-xs font-bold border border-slate-200">Mostrar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-4 border-t flex justify-end">
+                    <button type="button" onclick="testCloudConnection()" id="btn-test-cloud" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2 px-4 rounded-lg border border-slate-200 transition-colors">
+                        Testear Conexión Nube
+                    </button>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 2: ORTHANC PACS -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                <h2 class="text-base font-bold text-slate-800 border-b pb-3 mb-4 flex items-center gap-2">
+                    <span class="text-indigo-600">📦</span> Servidor PACS Local (Orthanc)
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="md:col-span-3">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">URL de Orthanc Local</label>
+                        <input type="url" id="ORTHANC_URL" value="{{ env_vars.ORTHANC_URL }}" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Usuario Orthanc</label>
+                        <input type="text" id="ORTHANC_USER" value="{{ env_vars.ORTHANC_USER }}" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Contraseña Orthanc</label>
+                        <div class="flex gap-2">
+                            <input type="password" id="ORTHANC_PASS" value="{{ env_vars.ORTHANC_PASS }}" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all">
+                            <button type="button" onclick="togglePasswordVisibility('ORTHANC_PASS')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 rounded-lg text-xs font-bold border border-slate-200">Mostrar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-4 border-t flex justify-end">
+                    <button type="button" onclick="testPacsConnection()" id="btn-test-pacs" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2 px-4 rounded-lg border border-slate-200 transition-colors">
+                        Testear Conexión PACS
+                    </button>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 3: GEMINI Y LOCAL IA -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                <h2 class="text-base font-bold text-slate-800 border-b pb-3 mb-4 flex items-center gap-2">
+                    <span class="text-indigo-600">🧠</span> Integración de Inteligencia Artificial
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Motor de IA Activo por Defecto (ACTIVE_AI_ENGINE)</label>
+                        <select id="ACTIVE_AI_ENGINE" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all">
+                            <option value="gemini" {% if env_vars.ACTIVE_AI_ENGINE == 'gemini' %}selected{% endif %}>Google Gemini (Nube/Multimodal)</option>
+                            <option value="deepseek" {% if env_vars.ACTIVE_AI_ENGINE == 'deepseek' %}selected{% endif %}>DeepSeek (Nube/Híbrido)</option>
+                            <option value="ollama" {% if env_vars.ACTIVE_AI_ENGINE == 'ollama' %}selected{% endif %}>Ollama Local (100% Offline/Privado)</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Google Gemini API Key (GEMINI_API_KEY)</label>
+                        <div class="flex gap-2">
+                            <input type="password" id="GEMINI_API_KEY" value="{{ env_vars.GEMINI_API_KEY }}" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all">
+                            <button type="button" onclick="togglePasswordVisibility('GEMINI_API_KEY')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 rounded-lg text-xs font-bold border border-slate-200">Mostrar</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">DeepSeek API Key (DEEPSEEK_API_KEY)</label>
+                        <div class="flex gap-2">
+                            <input type="password" id="DEEPSEEK_API_KEY" value="{{ env_vars.DEEPSEEK_API_KEY }}" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all">
+                            <button type="button" onclick="togglePasswordVisibility('DEEPSEEK_API_KEY')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 rounded-lg text-xs font-bold border border-slate-200">Mostrar</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Modelo DeepSeek (DEEPSEEK_MODEL)</label>
+                        <input type="text" id="DEEPSEEK_MODEL" value="{{ env_vars.DEEPSEEK_MODEL }}" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">URL de Ollama Local (LLM)</label>
+                        <input type="url" id="OLLAMA_BASE_URL" value="{{ env_vars.OLLAMA_BASE_URL }}" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Modelo LLM Local</label>
+                        <input type="text" id="LLM_MODEL" value="{{ env_vars.LLM_MODEL }}" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Modelo Whisper (Transcripción)</label>
+                        <input type="text" id="WHISPER_MODEL" value="{{ env_vars.WHISPER_MODEL }}" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Modelo Embeddings</label>
+                        <input type="text" id="EMBEDDING_MODEL" value="{{ env_vars.EMBEDDING_MODEL }}" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all">
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 4: PROMPTS AVANZADOS -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-6">
+                <h2 class="text-base font-bold text-slate-800 border-b pb-3 mb-4 flex items-center gap-2">
+                    <span class="text-indigo-600">✍️</span> Configuración de Prompts por Especialidad
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Especialidad</label>
+                        <select id="PROMPT_SPECIALTY" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all">
+                            <option value="general">General</option>
+                            <option value="ginecologia">Ginecología y Obstetricia</option>
+                            <option value="traumatologia">Traumatología y Ortopedia</option>
+                            <option value="cardiologia">Cardiología</option>
+                            <option value="neumonologia">Neumonología</option>
+                            <option value="gastroenterologia">Gastroenterología</option>
+                            <option value="pediatria">Pediatría</option>
+                            <option value="oftalmologia">Oftalmología</option>
+                            <option value="neurologia">Neurología</option>
+                            <option value="urologia">Urología</option>
+                            <option value="dermatologia">Dermatología</option>
+                            <option value="endocrinologia">Endocrinología</option>
+                            <option value="otorrinolaringologia">Otorrinolaringología</option>
+                            <option value="reumatologia">Reumatología</option>
+                            <option value="cirugia_vascular">Cirugía Vascular</option>
+                            <option value="obstetricia">Obstetricia</option>
+                            <option value="nefrologia">Nefrología</option>
+                            <option value="oncologia">Oncología</option>
+                            <option value="medicina_interna">Medicina Interna</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Nombre a Mostrar</label>
+                        <input type="text" id="PROMPT_DISPLAY_NAME" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Áreas de Foco (una por línea)</label>
+                        <textarea id="PROMPT_FOCUS" rows="3" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all"></textarea>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Signos Patológicos a Buscar (una por línea)</label>
+                        <textarea id="PROMPT_SIGNS" rows="3" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all"></textarea>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Mediciones Clínicas (una por línea)</label>
+                        <textarea id="PROMPT_MEASUREMENTS" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all"></textarea>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Banderas Rojas / Alertas (una por línea)</label>
+                        <textarea id="PROMPT_REDFLAGS" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all"></textarea>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-4 border-t flex justify-end gap-3">
+                    <button type="button" onclick="saveCustomPrompt()" id="btn-save-prompt" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold py-2 px-4 rounded-lg border border-indigo-200 transition-colors">
+                        Guardar Prompt de Especialidad
+                    </button>
+                </div>
+            </div>
+
+            <!-- BOTÓN GUARDAR (Variables de Entorno) -->
+            <div class="flex items-center justify-between p-6 bg-slate-900 rounded-2xl text-white shadow-xl">
+                <div class="text-xs text-slate-400 max-w-md">
+                    * Al guardar los cambios, el archivo de configuración <code>.env</code> se actualizará y los servicios del Gateway se reiniciarán automáticamente.
+                </div>
+                <button type="submit" id="btn-submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-8 rounded-xl transition-colors shadow-lg shadow-indigo-600/30">
+                    Guardar Configuración
+                </button>
+            </div>
+
+        </form>
+
+    </main>
+
+    <footer class="max-w-7xl mx-auto px-4 py-8 text-center border-t border-slate-200 shrink-0">
+        <p class="text-slate-400 text-xs">© 2026 Hipocrafy Med - Módulo Edge Diagnostic AI</p>
+    </footer>
+
+    <script>
+        function togglePasswordVisibility(id) {
+            const input = document.getElementById(id);
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
+
+        async function testCloudConnection() {
+            const btn = document.getElementById('btn-test-cloud');
+            const token = document.getElementById('GATEWAY_API_TOKEN').value;
+            const url = document.getElementById('HIPOCRAFY_CLOUD_URL').value;
+            
+            btn.textContent = 'Probando...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/settings/test-cloud', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, url })
+                });
+                const data = await response.json();
+                if (response.ok && data.status === 'ok') {
+                    alert(`✅ Conexión exitosa a la nube.\n📍 Nodo: ${data.gateway_name}\n🏥 Organización: ${data.clinic_name}`);
+                } else {
+                    alert(`❌ Error de conexión: ${data.message || 'Respuesta no autorizada'}`);
+                }
+            } catch (error) {
+                alert(`❌ Error de red al testear conexión.`);
+            } finally {
+                btn.textContent = 'Testear Conexión Nube';
+                btn.disabled = false;
+            }
+        }
+
+        async function testPacsConnection() {
+            const btn = document.getElementById('btn-test-pacs');
+            const url = document.getElementById('ORTHANC_URL').value;
+            const user = document.getElementById('ORTHANC_USER').value;
+            const pass = document.getElementById('ORTHANC_PASS').value;
+            
+            btn.textContent = 'Probando...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/settings/test-pacs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, user, pass })
+                });
+                const data = await response.json();
+                if (response.ok && data.status === 'ok') {
+                    alert(`✅ Conexión exitosa a Orthanc PACS.\n📦 Versión: ${data.version}\n🔌 Plugins habilitados: ${data.plugins.join(', ')}`);
+                } else {
+                    alert(`❌ Error al conectar a Orthanc: ${data.message}`);
+                }
+            } catch (error) {
+                alert(`❌ Error de red al testear conexión local.`);
+            } finally {
+                btn.textContent = 'Testear Conexión PACS';
+                btn.disabled = false;
+            }
+        }
+
+        document.getElementById('settings-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit');
+            
+            // Mostrar overlay de reinicio
+            const overlay = document.getElementById('restart-overlay');
+            const statusText = document.getElementById('restart-status');
+            const progress = document.getElementById('restart-progress');
+            
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex');
+            statusText.textContent = "Guardando configuración...";
+            progress.style.width = "10%";
+            btn.disabled = true;
+
+            const settings = {
+                GATEWAY_NAME: document.getElementById('GATEWAY_NAME').value,
+                HIPOCRAFY_CLOUD_URL: document.getElementById('HIPOCRAFY_CLOUD_URL').value,
+                GATEWAY_API_TOKEN: document.getElementById('GATEWAY_API_TOKEN').value,
+                ORTHANC_URL: document.getElementById('ORTHANC_URL').value,
+                ORTHANC_USER: document.getElementById('ORTHANC_USER').value,
+                ORTHANC_PASS: document.getElementById('ORTHANC_PASS').value,
+                GEMINI_API_KEY: document.getElementById('GEMINI_API_KEY').value,
+                DEEPSEEK_API_KEY: document.getElementById('DEEPSEEK_API_KEY').value,
+                DEEPSEEK_MODEL: document.getElementById('DEEPSEEK_MODEL').value,
+                ACTIVE_AI_ENGINE: document.getElementById('ACTIVE_AI_ENGINE').value,
+                OLLAMA_BASE_URL: document.getElementById('OLLAMA_BASE_URL').value,
+                LLM_MODEL: document.getElementById('LLM_MODEL').value,
+                WHISPER_MODEL: document.getElementById('WHISPER_MODEL').value,
+                EMBEDDING_MODEL: document.getElementById('EMBEDDING_MODEL').value
+            };
+
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+                
+                if (response.ok) {
+                    // Iniciar polling de reconexión
+                    pollHealth();
+                } else {
+                    const data = await response.json();
+                    alert(`❌ Error al guardar: ${data.detail || 'Error interno'}`);
+                    overlay.classList.add('hidden');
+                    overlay.classList.remove('flex');
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                alert("❌ Error al enviar la configuración.");
+                overlay.classList.add('hidden');
+                overlay.classList.remove('flex');
+                btn.disabled = false;
+            }
+        });
+
+        async function pollHealth() {
+            const statusText = document.getElementById('restart-status');
+            const progress = document.getElementById('restart-progress');
+            let attempts = 0;
+            const maxAttempts = 30; // 60 segundos máx
+            
+            statusText.textContent = "Apagando servicios anteriores y actualizando variables...";
+            progress.style.width = "25%";
+            
+            // Esperamos 3 segundos antes del primer intento para permitir que el servicio se detenga
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            
+            const poll = setInterval(async () => {
+                attempts++;
+                const pct = Math.min(25 + (attempts * 2.5), 95);
+                progress.style.width = `${pct}%`;
+                statusText.textContent = `Esperando que el Gateway vuelva a estar en línea... (Intento ${attempts}/30)`;
+                
+                try {
+                    const res = await fetch('/health', { cache: 'no-store' });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.status === 'online') {
+                            clearInterval(poll);
+                            progress.style.width = "100%";
+                            statusText.className = "text-xs font-semibold text-emerald-600";
+                            statusText.textContent = "¡Gateway en línea y listo! Redirigiendo...";
+                            setTimeout(() => {
+                                window.location.href = '/';
+                            }, 1000);
+                        }
+                    }
+                } catch (e) {
+                    // Ignorar fallas de red durante la caída del servicio
+                    console.log("Esperando servicio...", e);
+                }
+                
+                if (attempts >= maxAttempts) {
+                    clearInterval(poll);
+                    statusText.className = "text-xs font-semibold text-rose-600";
+                    statusText.textContent = "El reinicio está tomando más tiempo del esperado. Redirigiendo de todos modos...";
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+                }
+            }, 2000);
+        }
+
+        // --- Lógica de Prompts Custom ---
+        let customPrompts = {};
+
+        async function loadCustomPrompts() {
+            try {
+                const response = await fetch('/api/custom-prompts');
+                if (response.ok) {
+                    customPrompts = await response.json();
+                    loadPromptForm();
+                }
+            } catch(e) {
+                console.error("Error loading prompts", e);
+            }
+        }
+
+        function loadPromptForm() {
+            const spec = document.getElementById('PROMPT_SPECIALTY').value;
+            const data = customPrompts[spec] || {
+                display_name: "",
+                focus_areas: [],
+                pathology_signs: [],
+                measurements: [],
+                red_flags: []
+            };
+
+            document.getElementById('PROMPT_DISPLAY_NAME').value = data.display_name || "";
+            document.getElementById('PROMPT_FOCUS').value = (data.focus_areas || []).join('\n');
+            document.getElementById('PROMPT_SIGNS').value = (data.pathology_signs || []).join('\n');
+            document.getElementById('PROMPT_MEASUREMENTS').value = (data.measurements || []).join('\n');
+            document.getElementById('PROMPT_REDFLAGS').value = (data.red_flags || []).join('\n');
+        }
+
+        document.getElementById('PROMPT_SPECIALTY').addEventListener('change', loadPromptForm);
+
+        async function saveCustomPrompt() {
+            const btn = document.getElementById('btn-save-prompt');
+            btn.textContent = 'Guardando...';
+            btn.disabled = true;
+
+            const spec = document.getElementById('PROMPT_SPECIALTY').value;
+            customPrompts[spec] = {
+                display_name: document.getElementById('PROMPT_DISPLAY_NAME').value,
+                focus_areas: document.getElementById('PROMPT_FOCUS').value.split('\n').filter(l => l.trim() !== ""),
+                pathology_signs: document.getElementById('PROMPT_SIGNS').value.split('\n').filter(l => l.trim() !== ""),
+                measurements: document.getElementById('PROMPT_MEASUREMENTS').value.split('\n').filter(l => l.trim() !== ""),
+                red_flags: document.getElementById('PROMPT_REDFLAGS').value.split('\n').filter(l => l.trim() !== "")
+            };
+
+            try {
+                const response = await fetch('/api/custom-prompts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(customPrompts)
+                });
+                if (response.ok) {
+                    alert("✅ Prompt guardado para " + spec);
+                } else {
+                    alert("❌ Error al guardar el prompt");
+                }
+            } catch(e) {
+                alert("❌ Error de red al guardar el prompt");
+            } finally {
+                btn.textContent = 'Guardar Prompt de Especialidad';
+                btn.disabled = false;
+            }
+        }
+
+        // Cargar al inicio
+        loadCustomPrompts();
+
+    </script>
+
+    <!-- OVERLAY DE CARGA Y REINICIO -->
+    <div id="restart-overlay" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden flex-col items-center justify-center z-50 transition-all duration-300">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl text-center space-y-6 animate-[bounce_1s_infinite_alternate]">
+            <div class="flex justify-center">
+                <div class="animate-spin rounded-full h-16 w-16 border-4 border-indigo-600 border-t-transparent shadow-md"></div>
+            </div>
+            <div class="space-y-2">
+                <h3 class="text-lg font-bold text-slate-800">Aplicando Configuración</h3>
+                <p class="text-sm text-slate-500">Actualizando el entorno del sistema y reiniciando servicios.</p>
+                <p class="text-xs font-semibold text-indigo-600 animate-pulse mt-2" id="restart-status">Guardando...</p>
+            </div>
+            <div class="pt-4 border-t border-slate-100 flex flex-col gap-2">
+                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                    <div id="restart-progress" class="bg-indigo-600 h-full rounded-full transition-all duration-500" style="width: 5%"></div>
+                </div>
+                <span class="text-[10px] text-slate-400">Por favor, no recargues ni cierres esta pestaña.</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

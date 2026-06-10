@@ -1,0 +1,2 @@
+/home/pmoraga/hipocrafy-edge/venv/bin/python /home/pmoraga/hipocrafy-edge/simulate_capture.py --dni 17580837 --specialty neurologia
+/home/pmoraga/hipocrafy-edge/venv/bin/python /home/pmoraga/hipocrafy-edge/simulate_capture.py --dni 26909234 --specialty obstetricia
