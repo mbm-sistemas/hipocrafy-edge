@@ -39,7 +39,39 @@ SPECIALTY_PROMPTS = {
             "Masa sólida ovárica con flujo Doppler interno",
             "Líquido libre en fondo de saco con β-hCG positiva (descartar ectópico)",
             "Endometrio >5mm en paciente postmenopáusica con sangrado"
-        ]
+        ],
+        "organ_measurements_schema": {
+            "utero": {
+                "longitud_mm": None,
+                "ap_mm": None,
+                "transverso_mm": None,
+                "endometrio_mm": None
+            },
+            "ovario_izquierdo": {
+                "longitud_mm": None,
+                "ancho_mm": None,
+                "alto_mm": None,
+                "volumen_cc": None,
+                "n_foliculos": None,
+                "foliculo_mayor_mm": None
+            },
+            "ovario_derecho": {
+                "longitud_mm": None,
+                "ancho_mm": None,
+                "alto_mm": None,
+                "volumen_cc": None,
+                "n_foliculos": None,
+                "foliculo_mayor_mm": None
+            },
+            "douglas": {
+                "liquido_libre_ml": None
+            },
+            "masa_anexial": {
+                "dim1_mm": None,
+                "dim2_mm": None,
+                "dim3_mm": None
+            }
+        }
     },
 
     "traumatologia": {
@@ -264,7 +296,29 @@ SPECIALTY_PROMPTS = {
         "focus_areas": ["Biometría fetal (DBP, CC, CA, LF)", "Anatomía fetal (SNC, corazón, abdomen, columna)", "Placenta (ubicación, grado, inserción del cordón)", "Líquido amniótico (ILA o bolsillo mayor)", "Cuello uterino (longitud cervical)"],
         "pathology_signs": ["Restricción del crecimiento intrauterino (biometría <percentil 10)", "Polihidramnios (ILA >25cm) u oligoamnios (ILA <5cm)", "Placenta previa (inserción sobre OCI)", "Malformaciones fetales (defectos del tubo neural, cardiopatías, onfalocele)", "Desprendimiento prematuro de placenta (hematoma retroplacentario)", "Circular de cordón"],
         "measurements": ["Edad gestacional por biometría fetal", "Peso fetal estimado", "Longitud cervical (riesgo si <25mm)", "Índice de líquido amniótico"],
-        "red_flags": ["Desprendimiento de placenta con sangrado activo", "Vasa previa", "Bradicardia fetal sostenida", "Oligoamnios severo (ILA <2cm)"]
+        "red_flags": ["Desprendimiento de placenta con sangrado activo", "Vasa previa", "Bradicardia fetal sostenida", "Oligoamnios severo (ILA <2cm)"],
+        "organ_measurements_schema": {
+            "feto": {
+                "dbp_mm": None,
+                "cc_mm": None,
+                "ca_mm": None,
+                "lf_mm": None,
+                "peso_estimado_g": None,
+                "edad_gestacional_semanas": None,
+                "fc_lpm": None
+            },
+            "placenta": {
+                "grado_maduracion": None,
+                "espesor_mm": None
+            },
+            "liquido_amniotico": {
+                "ila_mm": None,
+                "bolsillo_mayor_mm": None
+            },
+            "cuello_uterino": {
+                "longitud_mm": None
+            }
+        }
     },
 
     "nefrologia": {
@@ -288,7 +342,24 @@ SPECIALTY_PROMPTS = {
         "focus_areas": ["Evaluación multiorgánica sistemática", "Tórax (corazón y pulmones)", "Abdomen completo", "Grandes vasos", "Búsqueda de colecciones o líquido libre"],
         "pathology_signs": ["Hepatoesplenomegalia", "Derrames (pleural, pericárdico, ascitis)", "Signos de insuficiencia cardíaca (redistribución vascular, cardiomegalia)", "Trombosis venosa profunda", "Adenopatías generalizadas (descartar linfoma)", "Signos de hipertensión portal"],
         "measurements": ["Diámetro esplénico (normal: <13cm)", "Diámetro hepático", "Índice cardiotorácico", "Calibre de vena porta (normal: <13mm)"],
-        "red_flags": ["Derrame pericárdico masivo", "Ascitis a tensión con compromiso respiratorio", "Tromboembolismo pulmonar", "Adenopatías con sospecha de linfoma"]
+        "red_flags": ["Derrame pericárdico masivo", "Ascitis a tensión con compromiso respiratorio", "Tromboembolismo pulmonar", "Adenopatías con sospecha de linfoma"],
+        "organ_measurements_schema": {
+            "higado": {
+                "diametro_longitudinal_mm": None
+            },
+            "bazo": {
+                "diametro_longitudinal_mm": None
+            },
+            "vena_porta": {
+                "calibre_mm": None
+            },
+            "aorta_abdominal": {
+                "diametro_mm": None
+            },
+            "corazon": {
+                "indice_cardiotoracio": None
+            }
+        }
     },
 
     "general": {
@@ -311,7 +382,14 @@ SPECIALTY_PROMPTS = {
             "Masa de características malignas (bordes irregulares, vascularización anómala)",
             "Colecciones líquidas con gas (absceso)",
             "Cualquier hallazgo que sugiera proceso agudo"
-        ]
+        ],
+        "organ_measurements_schema": {
+            "hallazgo_principal": {
+                "dim1_mm": None,
+                "dim2_mm": None,
+                "dim3_mm": None
+            }
+        }
     }
 }
 
@@ -336,6 +414,18 @@ def get_specialty_names() -> dict:
     """Retorna un dict {clave: nombre_display} de todas las especialidades disponibles."""
     prompts = get_merged_prompts()
     return {k: v.get("display_name", k.capitalize()) for k, v in prompts.items()}
+
+def _build_organ_analysis_template(schema: dict) -> str:
+    examples = []
+    for organ, fields in schema.items():
+        examples.append({
+            "organ": organ,
+            "status": "normal | alterado | no evaluable",
+            "signs": ["hallazgo si existe, omitir si no hay"],
+            "measurements": fields
+        })
+    return json.dumps(examples, ensure_ascii=False, indent=4)
+
 
 def build_specialty_prompt(
     specialty: str = "general",
@@ -384,6 +474,23 @@ def build_specialty_prompt(
     measurements = "\n".join(f"   - {m}" for m in spec["measurements"])
     red_flags = "\n".join(f"   - ⚠️ {r}" for r in spec["red_flags"])
 
+    schema = spec.get("organ_measurements_schema")
+    if schema:
+        organ_analysis_example = _build_organ_analysis_template(schema)
+        measurements_note = (
+            "IMPORTANTE: En el campo 'measurements' de cada órgano usa EXACTAMENTE "
+            "los campos numéricos del esquema. Completa con el valor medido (float) "
+            "o null si la estructura no es visible en la imagen. NO uses texto libre."
+        )
+    else:
+        organ_analysis_example = json.dumps([{
+            "organ": "nombre del órgano/estructura",
+            "status": "normal | alterado | no evaluable",
+            "signs": ["hallazgo 1", "hallazgo 2"],
+            "measurements": "mediciones si aplica"
+        }], ensure_ascii=False, indent=4)
+        measurements_note = ""
+
     prompt = f"""
 Actúa como un Especialista Senior en **{spec['display_name']}** con subespecialidad en Diagnóstico por Imagen.
 Tu objetivo es realizar un análisis clínico profundo y estructurado de la imagen médica proporcionada.
@@ -412,20 +519,14 @@ INSTRUCCIONES TÉCNICAS
 - Distingue artefactos técnicos (sombras acústicas, reverberación) de patología real.
 - Si la calidad de imagen no permite evaluar una estructura, indicalo explícitamente.
 - NO inventes hallazgos. Si no ves patología, indicá "Sin hallazgos patológicos significativos".
+{measurements_note}
 
 Responde estrictamente en JSON con esta estructura:
 {{
     "specialty": "{specialty}",
     "area_anatomica": "región evaluada",
     "clinical_correlation": "correlación con el contexto clínico (si fue proporcionado)",
-    "organ_analysis": [
-        {{
-            "organ": "nombre del órgano/estructura",
-            "status": "normal | alterado | no evaluable",
-            "signs": ["hallazgo 1", "hallazgo 2"],
-            "measurements": "mediciones si aplica"
-        }}
-    ],
+    "organ_analysis": {organ_analysis_example},
     "critical_findings": ["hallazgos que requieren acción inmediata"],
     "recommendations": ["sugerencias de estudios complementarios si corresponde"],
     "confidence": 0.0 a 1.0

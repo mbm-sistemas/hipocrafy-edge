@@ -19,7 +19,7 @@ try:
 
     # Hipocrafy Logic Imports
     from sync_service import sync_dicom_to_mbm_lab, sync_patient_pathologies, upload_ai_result, get_patient_clinical_context
-    from vision_service import analyze_with_gemini, synthesize_report
+    from vision_service import analyze_study, synthesize_report
     
     load_dotenv()
 
@@ -118,7 +118,7 @@ try:
                     "confidence": "HIGH",
                     "analysis_tag": "STABLE_PREVIEW"
                 }
-                full_report = synthesizer_report_mock(ai_data) # Template perfecto
+                full_report = synthesize_report(ai_data)
             else:
                 # 1. Análisis de Visión Real
                 try:
@@ -136,7 +136,7 @@ try:
                         "depth": getattr(ds, 'Rows', 'N/A')
                     }
                     
-                    ai_data = analyze_with_gemini(scrubbed_png, patient_id, specialty, clinical_context, dicom_meta)
+                    ai_data = analyze_study(scrubbed_png, patient_id, specialty, clinical_context, dicom_metadata=dicom_meta)
                 except Exception as vision_err:
                     if "429" in str(vision_err):
                         raise Exception("429_LIMIT")
