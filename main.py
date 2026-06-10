@@ -15,6 +15,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from dotenv import load_dotenv
 
+# Cargar .env ANTES de leer cualquier variable de entorno
+from dotenv import load_dotenv
+load_dotenv()
+
 # Configuración de Orthanc desde el .env
 ORTHANC_URL = os.getenv("ORTHANC_URL", "http://localhost:8042")
 ORTHANC_AUTH = (os.getenv("ORTHANC_USER", "orthanc"), os.getenv("ORTHANC_PASS", "orthanc"))
@@ -40,8 +44,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("hipocrafy-edge")
 
 from fastapi.middleware.cors import CORSMiddleware
-
-load_dotenv()
 
 app = FastAPI(title="Hipocrafy Edge AI Gateway")
 
@@ -172,10 +174,29 @@ async def process_and_sync(study_id: str):
                 mock_dni = patient_tags.get("PatientID", "00000000")
                 mock_modality = main_tags.get("ModalitiesInStudy", "UNKNOWN")
 
-        # 2. Ejecutar Inferencia IA Local
-        from ai_model import run_inference
-        findings = run_inference(study_id)
-        logger.info(f"Resultados IA: {findings}")
+        # 2. Descargar la imagen central del estudio y analizar con vision_service
+        try:
+            async with httpx.AsyncClient() as client:
+                inst_resp = await client.get(f"{orthanc_url}/studies/{study_id}/instances", auth=auth, timeout=15.0)
+                instances = inst_resp.json() if inst_resp.status_code == 200 else []
+
+            if not instances:
+                raise ValueError("Estudio sin instancias en Orthanc")
+
+            best_id = instances[len(instances) // 2].get("ID", instances[0]["ID"])
+            async with httpx.AsyncClient() as client:
+                img_resp = await client.get(f"{orthanc_url}/instances/{best_id}/preview", auth=auth, timeout=15.0)
+
+            img_path = os.path.join(BASE_DIR, "static", "previews", f"webhook_{study_id}.jpg")
+            with open(img_path, "wb") as fh:
+                fh.write(img_resp.content)
+
+            specialty = ACTIVE_CONFIG["specialty"]
+            findings = analyze_study(image_path=img_path, patient_id=mock_dni, specialty=specialty)
+            logger.info(f"Resultados IA (webhook): {findings.get('specialty')} — confianza {findings.get('confidence')}")
+        except Exception as ai_err:
+            logger.error(f"Error en análisis IA (webhook): {ai_err}")
+            findings = {"error": str(ai_err), "confidence": 0.0, "organ_analysis": [], "critical_findings": []}
 
         # 3. Persistir Localmente (Para uso sin internet)
         save_local_study(study_id, mock_dni, mock_modality, findings)
@@ -366,7 +387,7 @@ async def process_dicom_instance(instance_id):
             save_local_study(instance_id, patient_dni, modality, findings, f"static/previews/{instance_id}.jpg")
             if API_TOKEN:
                 # Sincronizar en segundo plano (no bloquea el polling)
-                asyncio.create_task(sync_study_to_cloud(instance_id, patient_dni, modality, findings, encoded_image))
+                asyncio.create_task(sync_study_to_cloud(instance_id, patient_dni, modality, findings, encoded_image, specialty=ACTIVE_CONFIG["specialty"]))
 
 @app.on_event("startup")
 async def startup_event():
@@ -489,21 +510,27 @@ async def receive_capture(
 
     # Sincronizar en segundo plano si hay token
     if API_TOKEN:
-        background_tasks.add_task(sync_study_to_cloud, study_id, patient_dni, modality, findings, encoded_string)
+        background_tasks.add_task(sync_study_to_cloud, study_id, patient_dni, modality, findings, encoded_string, effective_specialty)
     
     return {"status": "success", "study_id": study_id, "specialty": specialty, "findings": findings, "report": report}
 
-async def sync_study_to_cloud(study_id, dni, modality, findings, image_base64=None):
-    headers = {
-        "X-Gateway-Token": API_TOKEN,
-        "Authorization": f"Bearer {API_TOKEN}"
-    }
+async def sync_study_to_cloud(study_id, dni, modality, findings, image_base64=None, specialty=None):
+    headers = {"Authorization": f"Bearer {API_TOKEN}"}
+    organ_analysis = findings.get("organ_analysis") if isinstance(findings, dict) else None
+    resolved_specialty = specialty or (findings.get("specialty", "general") if isinstance(findings, dict) else "general")
     payload = {
         "patient_document": dni,
         "study_date": datetime.now().isoformat(),
         "modality": modality,
-        "ai_findings": findings,
-        "image_base64": image_base64
+        "orthanc_study_id": study_id,
+        "organ_analysis": organ_analysis,
+        "ai_findings": {
+            "finding":    findings.get("clinical_correlation", "Sin hallazgos") if isinstance(findings, dict) else str(findings),
+            "confidence": findings.get("confidence", 0.0) if isinstance(findings, dict) else 0.0,
+            "anomalies":  findings.get("critical_findings", []) if isinstance(findings, dict) else [],
+            "specialty":  resolved_specialty,
+        },
+        "image_base64": image_base64,
     }
     async with httpx.AsyncClient() as client:
         try:
@@ -562,11 +589,14 @@ def update_env_file(filepath: str, new_settings: dict):
 def bg_restart_services():
     import time
     import subprocess
-    # Esperar 2 segundos para dar tiempo a retornar la respuesta HTTP
+    # Requiere entrada en /etc/sudoers.d/hipocrafy-edge:
+    #   pmoraga ALL=(ALL) NOPASSWD: /bin/systemctl restart hipocrafy-api.service, /bin/systemctl restart hipocrafy-dicom.service
     time.sleep(2)
     logger.info("⚙️ Reiniciando servicios hipocrafy-api y hipocrafy-dicom...")
-    cmd = "echo 'Martiluc1317' | sudo -S systemctl restart hipocrafy-api.service hipocrafy-dicom.service"
-    subprocess.run(cmd, shell=True)
+    subprocess.run(
+        ["sudo", "systemctl", "restart", "hipocrafy-api.service", "hipocrafy-dicom.service"],
+        check=False
+    )
 
 @app.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request, _: None = Depends(_require_settings_auth)):
@@ -683,11 +713,11 @@ async def health_check():
     cloud_status = "unknown"
     if API_TOKEN:
         try:
-            # Garantizar que siempre se verifique el endpoint correcto,
-            # independientemente de si HIPOCRAFY_CLOUD_URL incluye o no /edge-gateway
             base = CLOUD_URL.rstrip("/")
             if not base.endswith("/edge-gateway"):
-                base = base.rstrip("/api").rstrip("/") + "/api/edge-gateway"
+                if base.endswith("/api"):
+                    base = base[:-4]
+                base = base.rstrip("/") + "/api/edge-gateway"
             health_url = f"{base}/config"
 
             headers = {
@@ -723,8 +753,6 @@ async def extract_findings(request: Request):
     try:
         body = await request.json()
         image_base64 = body.get("image_base64", "")
-        mime_type = body.get("mime_type", "")
-        
         findings = {
             "finding": "Estructuras óseas y tejidos blandos de morfología conservada. Sin evidencia de fracturas agudas, lesiones líticas o blásticas.",
             "confidence": 0.94,
@@ -760,8 +788,7 @@ async def extract_findings(request: Request):
 
                 # Ejecutar inferencia en la GPU
                 input_name = session.get_inputs()[0].name
-                outputs = session.run(None, {input_name: img_input})
-                
+                session.run(None, {input_name: img_input})
                 findings["finding"] += " [Analizado vía GPU (BiomedCLIP Local)]"
                 findings["confidence"] = 0.95
             else:
@@ -788,8 +815,6 @@ async def local_deepseek_proxy(request: Request):
         model_name = body.get("model", "deepseek-chat")
         messages = body.get("messages", [])
         temperature = body.get("temperature", 0.1)
-        max_tokens = body.get("max_tokens", 2000)
-
         # Log the request
         logger.info(f"Received local DeepSeek proxy request for model: {model_name}")
 

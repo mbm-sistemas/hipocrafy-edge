@@ -1,7 +1,6 @@
 import os
 import requests
 import logging
-import json
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -56,18 +55,20 @@ def get_available_pathologies():
 def get_patient_clinical_context(dni):
     """Obtiene el historial clínico relevante (SOS, laboratorios, patologías) del paciente."""
     if not dni or dni == "UNKNOWN": return None
-    
+
     try:
-        url = get_api_url(f"admin/users/find-by-dni/{dni}")
-        verify = not ("127.0.0.1" in url or "localhost" in url)
+        url = get_api_url(f"admin/users?dni={dni}")
+        verify = not any(h in url for h in ("127.0.0.1", "localhost"))
         resp = requests.get(url, headers=get_auth_headers(), timeout=TIMEOUT, verify=verify)
-        
+
         if resp.status_code == 200:
-            user_data = resp.json()
+            users = resp.json().get('data', [])
+            if not users:
+                return None
+            user_data = users[0]
             pathologies = ", ".join([p['name'] for p in user_data.get('pathologies', [])])
             history = user_data.get('medical_history', [])
-            recent_events = " | ".join([f"{h['type']}: {h['notes']}" for h in history[-3:]]) # Últimos 3 eventos
-            
+            recent_events = " | ".join([f"{h['type']}: {h['notes']}" for h in history[-3:]])
             context = f"Patologías previas: {pathologies}. Antecedentes recientes: {recent_events}."
             return context
         return None
