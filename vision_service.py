@@ -51,13 +51,41 @@ def analyze_study(
         combined_context = None
     # -------------------------------------------------------------
     
-    if engine == "deepseek":
-        return analyze_with_deepseek(image_path, patient_id, specialty, combined_context, patient_age, patient_sex, dicom_metadata)
-    elif engine == "ollama":
-        return analyze_with_ollama(image_path, patient_id, specialty, combined_context, patient_age, patient_sex, dicom_metadata)
-    else:
-        # Default a Gemini
-        return analyze_with_gemini(image_path, patient_id, specialty, combined_context, patient_age, patient_sex, dicom_metadata)
+    _engines = [
+        ("gemini",   analyze_with_gemini),
+        ("deepseek", analyze_with_deepseek),
+        ("ollama",   analyze_with_ollama),
+    ]
+    # Poner el motor preferido primero, los demás como fallback en orden
+    preferred_idx = next((i for i, (name, _) in enumerate(_engines) if name == engine), 0)
+    ordered = _engines[preferred_idx:] + _engines[:preferred_idx]
+
+    call_args = (image_path, patient_id, specialty, combined_context, patient_age, patient_sex, dicom_metadata)
+    last_error = None
+    for eng_name, fn in ordered:
+        try:
+            logger.info(f"[*] Intentando motor: {eng_name.upper()}...")
+            result = fn(*call_args)
+            if result and "error" not in result:
+                logger.info(f"[+] Motor {eng_name.upper()} respondió exitosamente.")
+                return result
+            last_error = result.get("error", "respuesta vacía")
+            logger.warning(f"[!] {eng_name.upper()} devolvió error: {last_error}. Probando siguiente motor.")
+        except Exception as e:
+            last_error = str(e)
+            logger.warning(f"[!] {eng_name.upper()} falló con excepción: {e}. Probando siguiente motor.")
+
+    logger.error(f"[X] Todos los motores de IA fallaron. Último error: {last_error}")
+    return {
+        "specialty": specialty,
+        "area_anatomica": "no evaluable",
+        "clinical_correlation": "Sin conectividad con motores de IA. Verificar claves API y conexión.",
+        "organ_analysis": [],
+        "critical_findings": [],
+        "recommendations": ["Reintentar el análisis cuando se restablezca la conectividad."],
+        "confidence": 0.0,
+        "error": f"Todos los motores fallaron: {last_error}"
+    }
 
 
 def extract_visual_findings(image_path):
@@ -105,7 +133,7 @@ def analyze_with_gemini(
     if not api_key:
         return {"error": "Missing GEMINI_API_KEY in .env"}
         
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
     
     # Construir el prompt parametrizado por especialidad
     prompt = build_specialty_prompt(
@@ -163,9 +191,14 @@ def analyze_with_deepseek(
     api_key = os.getenv("DEEPSEEK_API_KEY", "")
     if not api_key:
         return {"error": "Missing DEEPSEEK_API_KEY in .env"}
-        
+
     model = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
-    url = "https://api.deepseek.com/v1/chat/completions"
+
+    # Si DEEPSEEK_LOCAL_FIRST=true, intenta la URL local antes que la nube
+    local_first = os.getenv("DEEPSEEK_LOCAL_FIRST", "false").lower() == "true"
+    local_url   = os.getenv("DEEPSEEK_LOCAL_URL", "")
+    cloud_url   = "https://api.deepseek.com/v1/chat/completions"
+    urls_to_try = ([local_url, cloud_url] if local_first and local_url else [cloud_url])
     
     # 1. Extraer hallazgos de visión locales
     visual_findings = extract_visual_findings(image_path)
@@ -190,33 +223,36 @@ def analyze_with_deepseek(
     Por favor interpreta estos hallazgos según tu especialidad y devuelve estrictamente el JSON esperado.
     """
 
-    try:
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "model": model,
-            "messages": [
-                {"role": "system", "content": "Eres un asistente médico experto en diagnóstico."},
-                {"role": "user", "content": prompt}
-            ],
-            "temperature": 0.1,
-            "response_format": {"type": "json_object"}
-        }
-        
-        response = requests.post(url, json=payload, headers=headers, timeout=30.0)
-        resp_json = response.json()
-        
-        if response.status_code != 200:
-            raise Exception(f"HTTP {response.status_code}: {resp_json}")
-            
-        text = resp_json['choices'][0]['message']['content'].strip()
-        data = json.loads(text)
-        return data
-    except Exception as e:
-        logger.error(f"Error in DeepSeek analysis: {e}")
-        return {"error": str(e)}
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": "Eres un asistente médico experto en diagnóstico."},
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.1,
+        "response_format": {"type": "json_object"}
+    }
+
+    last_error = None
+    for endpoint in urls_to_try:
+        try:
+            logger.info(f"[*] DeepSeek → {endpoint}")
+            response = requests.post(endpoint, json=payload, headers=headers, timeout=30.0)
+            resp_json = response.json()
+            if response.status_code != 200:
+                raise Exception(f"HTTP {response.status_code}: {resp_json}")
+            text = resp_json['choices'][0]['message']['content'].strip()
+            return json.loads(text)
+        except Exception as e:
+            last_error = str(e)
+            logger.warning(f"[!] DeepSeek endpoint {endpoint} falló: {e}. Probando siguiente.")
+
+    logger.error(f"Error in DeepSeek analysis: {last_error}")
+    return {"error": last_error}
 
 
 def analyze_with_ollama(
@@ -350,7 +386,7 @@ def get_synthesis_prompt(ai_data, specialty_name):
 def synthesize_report_with_gemini(ai_data):
     logger.info("[*] Gemini LLM: Synthesizing medical report...")
     api_key = os.getenv("GEMINI_API_KEY", "")
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
     specialty_name = ai_data.get('specialty', 'General')
     
     try:

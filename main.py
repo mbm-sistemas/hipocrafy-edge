@@ -7,8 +7,10 @@ import asyncio
 import base64
 import httpx
 from datetime import datetime
-from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, UploadFile, File, Form
+import secrets
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, UploadFile, File, Form, Depends
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from dotenv import load_dotenv
@@ -85,6 +87,23 @@ templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 # Configuración Cloud
 CLOUD_URL = os.getenv("HIPOCRAFY_CLOUD_URL", "https://qas.hipocrafy-api.mbmsistemas.com.ar/api/edge-gateway")
 API_TOKEN = os.getenv("GATEWAY_API_TOKEN")
+
+# ── Auth para endpoints de configuración ────────────────────────────────────
+_http_basic = HTTPBasic(auto_error=True)
+
+def _require_settings_auth(credentials: HTTPBasicCredentials = Depends(_http_basic)):
+    """Protege los endpoints de settings con HTTP Basic. Password en SETTINGS_PASSWORD del .env."""
+    expected_password = os.getenv("SETTINGS_PASSWORD", "hipocrafy")
+    password_ok = secrets.compare_digest(
+        credentials.password.encode("utf-8"),
+        expected_password.encode("utf-8"),
+    )
+    if not password_ok:
+        raise HTTPException(
+            status_code=401,
+            detail="Contraseña incorrecta.",
+            headers={"WWW-Authenticate": "Basic"},
+        )
 
 # ═══════════════════════════════════════════════════════════
 #  BASE DE DATOS LOCAL (SQLite)
@@ -383,7 +402,7 @@ async def get_custom_prompts():
     return {}
 
 @app.post("/api/custom-prompts")
-async def save_custom_prompts(request: Request):
+async def save_custom_prompts(request: Request, _: None = Depends(_require_settings_auth)):
     try:
         data = await request.json()
         os.makedirs(os.path.dirname(PROMPTS_FILE), exist_ok=True)
@@ -550,7 +569,7 @@ def bg_restart_services():
     subprocess.run(cmd, shell=True)
 
 @app.get("/settings", response_class=HTMLResponse)
-async def settings_page(request: Request):
+async def settings_page(request: Request, _: None = Depends(_require_settings_auth)):
     """Configurador local del Gateway."""
     env_vars = {
         "GATEWAY_NAME": os.getenv("GATEWAY_NAME", ""),
@@ -636,7 +655,7 @@ async def test_pacs_connection_endpoint(request: Request):
         )
 
 @app.post("/api/settings")
-async def update_settings_endpoint(request: Request, background_tasks: BackgroundTasks):
+async def update_settings_endpoint(request: Request, background_tasks: BackgroundTasks, _: None = Depends(_require_settings_auth)):
     try:
         new_settings = await request.json()
         env_path = os.path.join(BASE_DIR, ".env")
@@ -664,12 +683,19 @@ async def health_check():
     cloud_status = "unknown"
     if API_TOKEN:
         try:
+            # Garantizar que siempre se verifique el endpoint correcto,
+            # independientemente de si HIPOCRAFY_CLOUD_URL incluye o no /edge-gateway
+            base = CLOUD_URL.rstrip("/")
+            if not base.endswith("/edge-gateway"):
+                base = base.rstrip("/api").rstrip("/") + "/api/edge-gateway"
+            health_url = f"{base}/config"
+
             headers = {
                 "X-Gateway-Token": API_TOKEN,
                 "Authorization": f"Bearer {API_TOKEN}"
             }
             async with httpx.AsyncClient() as client:
-                r = await client.get(f"{CLOUD_URL}/config", headers=headers, timeout=5.0)
+                r = await client.get(health_url, headers=headers, timeout=5.0)
                 cloud_status = "connected" if r.status_code == 200 else f"error_{r.status_code}"
         except:
             cloud_status = "unreachable"
