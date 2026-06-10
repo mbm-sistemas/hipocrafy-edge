@@ -7,10 +7,16 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Configuration
+# Configuration — admin/patient API (legacy sync)
 MBM_LAB_API_BASE = os.getenv("MBM_LAB_API_BASE", "http://127.0.0.1:8000/api")
 API_TOKEN = os.getenv("MBM_LAB_API_TOKEN", "LOCAL_HUB_SECURE_TOKEN_001")
-TIMEOUT = 10 
+
+# Configuration — edge-gateway API (study upload)
+_CLOUD_URL = os.getenv("HIPOCRAFY_CLOUD_URL", "").rstrip("/")
+EDGE_API_BASE = _CLOUD_URL if _CLOUD_URL else "http://127.0.0.1:8000/api/edge-gateway"
+GATEWAY_TOKEN = os.getenv("GATEWAY_API_TOKEN", "")
+
+TIMEOUT = 10
 
 logger = logging.getLogger("HipocrafySync")
 
@@ -21,6 +27,13 @@ def get_auth_headers():
         "Accept": "application/json"
     }
     return headers
+
+def get_gateway_headers():
+    return {
+        "Authorization": f"Bearer {GATEWAY_TOKEN}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
 
 def get_api_url(endpoint):
     """Retorna la URL dinámica. Prioriza Localhost si está configurado."""
@@ -94,18 +107,35 @@ def sync_patient_pathologies(dni, ai_findings):
     except Exception as e:
         logger.error(f"Error en sync_patient_pathologies: {e}")
 
-def upload_ai_result(study_uid, report, ai_data):
-    """Sube el informe final de la IA al backend (Admin)."""
+def upload_ai_result(orthanc_study_uid, report, ai_data, patient_dni=None, specialty=None):
+    """Sube el informe final de la IA al backend via edge-gateway."""
     try:
-        url = get_api_url(f"admin/studies/{study_uid}/analysis")
+        url = f"{EDGE_API_BASE}/studies"
+        verify = not any(h in url for h in ("127.0.0.1", "localhost"))
+
+        organ_analysis = ai_data.get("organ_analysis") if isinstance(ai_data, dict) else None
+
         payload = {
-            "report": report,
-            "ai_metadata": ai_data,
-            "status": "COMPLETED"
+            "patient_document": patient_dni or ai_data.get("patient_id", "UNKNOWN"),
+            "study_date": __import__("datetime").date.today().isoformat(),
+            "modality": "US",
+            "orthanc_study_id": orthanc_study_uid,
+            "organ_analysis": organ_analysis,
+            "ai_findings": {
+                "finding":    ai_data.get("clinical_correlation", "Sin hallazgos"),
+                "confidence": ai_data.get("confidence", 0.0),
+                "anomalies":  ai_data.get("critical_findings", []),
+                "specialty":  specialty or ai_data.get("specialty", "general"),
+                "report":     report,
+            },
         }
-        verify = not ("127.0.0.1" in url or "localhost" in url)
-        resp = requests.post(url, json=payload, headers=get_auth_headers(), timeout=TIMEOUT, verify=verify)
-        return resp.status_code in [200, 201]
+
+        resp = requests.post(url, json=payload, headers=get_gateway_headers(), timeout=TIMEOUT, verify=verify)
+        if resp.status_code in [200, 201]:
+            logger.info(f"[+] Estudio {orthanc_study_uid} sincronizado (id={resp.json().get('study_id')})")
+            return True
+        logger.warning(f"[!] upload_ai_result HTTP {resp.status_code}: {resp.text[:200]}")
+        return False
     except Exception as e:
         logger.error(f"Error en upload_ai_result: {e}")
         return False

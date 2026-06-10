@@ -172,7 +172,7 @@ try:
                 sync_patient_pathologies(patient_id, findings)
                 
                 # 2. Subir Informe Completo
-                upload_ai_result(study_uid, full_report, ai_data)
+                upload_ai_result(study_uid, full_report, ai_data, patient_dni=patient_id, specialty=specialty)
             # --------------------------------------------
             
             # Push Final al Visor

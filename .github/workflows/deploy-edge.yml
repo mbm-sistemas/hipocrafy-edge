@@ -1,0 +1,49 @@
+name: Deploy Edge (Jetson)
+
+on:
+  push:
+    branches: [development]
+
+jobs:
+  deploy:
+    name: Sync & Restart Jetson
+    runs-on: [self-hosted, jetson]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Sync to deployment directory
+        run: |
+          rsync -av \
+            --exclude='.git' \
+            --exclude='__pycache__' \
+            --exclude='*.pyc' \
+            --exclude='venv' \
+            --exclude='estudios_recibidos' \
+            --exclude='estudios_procesados' \
+            --exclude='edge_data.db' \
+            --exclude='*.log' \
+            $GITHUB_WORKSPACE/ /home/pmoraga/hipocrafy-edge/
+
+      - name: Install/update Python dependencies
+        run: |
+          cd /home/pmoraga/hipocrafy-edge
+          if [ -f venv/bin/pip ]; then
+            venv/bin/pip install -r requirements.txt --quiet
+          fi
+
+      - name: Restart services
+        run: |
+          sudo systemctl restart hipocrafy-api.service
+          sudo systemctl restart hipocrafy-dicom.service
+          sleep 3
+
+      - name: Verify services are running
+        run: |
+          echo "=== hipocrafy-api ==="
+          sudo systemctl is-active hipocrafy-api.service
+          echo "=== hipocrafy-dicom ==="
+          sudo systemctl is-active hipocrafy-dicom.service
