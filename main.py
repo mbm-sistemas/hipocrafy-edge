@@ -31,7 +31,7 @@ from prompts.specialties import get_specialty_names
 from vision_service import analyze_study, synthesize_report
 from services.sync_service import sync_service
 from services.rag_service import rag_service
-from model_updater import run_ota_check
+from model_updater import run_ota_check, predict_from_organ_analysis
 
 # Configuración de Sesión Activa (Especialidad por defecto para estudios automáticos)
 ACTIVE_CONFIG = {
@@ -43,6 +43,51 @@ ACTIVE_CONFIG = {
 # Configuración de logs
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("hipocrafy-edge")
+
+
+def _enrich_with_local_model(findings: dict, specialty: str, population_context: dict | None = None) -> dict:
+    """
+    Runs local ONNX inference on organ_analysis and injects pathology_status + confidence.
+    Gemini returns organ_analysis as a list; ONNX expects a dict keyed by organ name.
+    Gemini result is overridden only when a local model is available for the specialty.
+    """
+    raw_oa = findings.get("organ_analysis")
+    if not raw_oa:
+        return findings
+
+    if isinstance(raw_oa, list):
+        organ_dict = {
+            item["organ"]: item.get("measurements", {})
+            for item in raw_oa
+            if isinstance(item, dict) and item.get("organ")
+        }
+    elif isinstance(raw_oa, dict):
+        organ_dict = raw_oa
+    else:
+        return findings
+
+    if not organ_dict:
+        return findings
+
+    local = predict_from_organ_analysis(specialty, organ_dict, population_context)
+    if local is None:
+        return findings
+
+    prob = local["probability"]
+    if local["label"] == "patologico":
+        ps = "red" if prob >= 0.75 else "yellow"
+    else:
+        ps = "green"
+
+    findings["pathology_status"] = ps
+    findings["confidence"] = round(prob if ps != "green" else 1 - prob, 4)
+    findings["local_model_result"] = local
+    findings["pop_context_applied"] = local.get("used_population_context", False)
+    logger.info(
+        f"[LOCAL ONNX] {specialty} → {local['label']} "
+        f"(prob={prob:.3f}, version={local['model_version']}, pop_ctx={local['used_population_context']})"
+    )
+    return findings
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -194,6 +239,7 @@ async def process_and_sync(study_id: str):
 
             specialty = ACTIVE_CONFIG["specialty"]
             findings = analyze_study(image_path=img_path, patient_id=mock_dni, specialty=specialty)
+            findings = _enrich_with_local_model(findings, specialty)
             logger.info(f"Resultados IA (webhook): {findings.get('specialty')} — confianza {findings.get('confidence')}")
         except Exception as ai_err:
             logger.error(f"Error en análisis IA (webhook): {ai_err}")
@@ -380,7 +426,8 @@ async def process_dicom_instance(instance_id):
                 specialty=ACTIVE_CONFIG["specialty"],
                 clinical_context=ACTIVE_CONFIG["clinical_context"]
             )
-            
+            findings = _enrich_with_local_model(findings, ACTIVE_CONFIG["specialty"])
+
             # Generar informe formal
             report = synthesize_report(findings) if not findings.get("error") else None
             
@@ -483,7 +530,8 @@ async def receive_capture(
         patient_age=patient_age,
         patient_sex=patient_sex
     )
-    
+    findings = _enrich_with_local_model(findings, effective_specialty)
+
     # Generar informe médico formal
     report = synthesize_report(findings) if not findings.get("error") else None
     
