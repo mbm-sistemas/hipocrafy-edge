@@ -31,6 +31,7 @@ from prompts.specialties import get_specialty_names
 from vision_service import analyze_study, synthesize_report
 from services.sync_service import sync_service
 from services.rag_service import rag_service
+from model_updater import run_ota_check
 
 # Configuración de Sesión Activa (Especialidad por defecto para estudios automáticos)
 ACTIVE_CONFIG = {
@@ -391,8 +392,9 @@ async def process_dicom_instance(instance_id):
 
 @app.on_event("startup")
 async def startup_event():
-    # Iniciar el monitoreo de Orthanc en segundo plano
     asyncio.create_task(poll_orthanc())
+    # OTA model check in background — non-blocking
+    asyncio.get_event_loop().run_in_executor(None, run_ota_check)
 
 @app.get("/api/config")
 async def get_gateway_config():
