@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import pickle
+import time
 from pathlib import Path
 
 import requests
@@ -74,21 +75,46 @@ def _download_file(url: str, dest: Path) -> bool:
 def check_and_update(specialty: str) -> bool:
     """
     Returns True if a new model was downloaded for this specialty.
+    Retries up to 3 times on network errors with exponential backoff (2s, 4s, 8s).
+    Non-retryable errors (404, auth, bad JSON) fail immediately.
     """
     if not CLOUD_URL or not GATEWAY_TOKEN:
         logger.warning("OTA skipped: HIPOCRAFY_CLOUD_URL or GATEWAY_API_TOKEN not set.")
         return False
 
-    try:
-        url = f"{_api_base()}/models/latest/{specialty}"
-        resp = requests.get(url, headers=_gateway_headers(), timeout=TIMEOUT)
-        if resp.status_code == 404:
-            logger.info(f"No model available for specialty={specialty}")
+    url = f"{_api_base()}/models/latest/{specialty}"
+    max_retries = 3
+    remote = None
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            resp = requests.get(url, headers=_gateway_headers(), timeout=TIMEOUT)
+            if resp.status_code == 404:
+                logger.info(f"No model available for specialty={specialty}")
+                return False
+            if resp.status_code in (401, 403):
+                logger.error(f"OTA auth error for {specialty}: HTTP {resp.status_code}")
+                return False
+            resp.raise_for_status()
+            remote = resp.json()
+            break
+        except (requests.exceptions.ConnectionError,
+                requests.exceptions.Timeout) as exc:
+            wait = 2 ** attempt  # 2s, 4s, 8s
+            if attempt < max_retries:
+                logger.warning(
+                    f"OTA network error for {specialty} (attempt {attempt}/{max_retries}), "
+                    f"retry in {wait}s: {exc}"
+                )
+                time.sleep(wait)
+            else:
+                logger.error(f"OTA check failed after {max_retries} attempts for {specialty}: {exc}")
+                return False
+        except Exception as exc:
+            logger.error(f"OTA non-retryable error for {specialty}: {exc}")
             return False
-        resp.raise_for_status()
-        remote = resp.json()
-    except Exception as exc:
-        logger.error(f"OTA check failed for {specialty}: {exc}")
+
+    if remote is None:
         return False
 
     remote_version = remote.get("version")
