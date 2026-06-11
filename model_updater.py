@@ -170,10 +170,47 @@ def load_model_bundle(specialty: str):
         return None
 
 
-def predict_from_organ_analysis(specialty: str, organ_analysis: dict) -> dict | None:
+REGIONS = ["NOA", "NEA", "Cuyo", "Pampeana", "Patagonia", "Metropolitana"]
+
+
+def _build_feature_row(
+    organ_analysis: dict,
+    feature_names: list[str],
+    population_context: dict | None = None,
+) -> list[float]:
+    """Build a flat feature vector matching feature_names order."""
+    import math
+
+    flat: dict[str, float] = {}
+
+    # Organ measurements
+    for organ, measurements in organ_analysis.items():
+        if not isinstance(measurements, dict):
+            continue
+        for key, val in measurements.items():
+            flat[f"{organ}__{key}"] = float(val) if val is not None else float("nan")
+
+    # Population context (mirrors model_trainer.flatten_population_context)
+    if population_context:
+        flat["pop__altitude_m"]        = float(population_context.get("altitude_m") or 0)
+        flat["pop__patient_age_years"] = float(population_context.get("patient_age_years") or float("nan"))
+        flat["pop__patient_bmi"]       = float(population_context.get("patient_bmi") or float("nan"))
+        flat["pop__parity"]            = float(population_context.get("parity") or 0)
+        region = population_context.get("region") or ""
+        for r in REGIONS:
+            flat[f"pop__region_{r}"] = 1.0 if region == r else 0.0
+
+    return [flat.get(f, float("nan")) for f in feature_names]
+
+
+def predict_from_organ_analysis(
+    specialty: str,
+    organ_analysis: dict,
+    population_context: dict | None = None,
+) -> dict | None:
     """
-    Run local MLP inference on organ_analysis measurements.
-    Returns {probability: float, label: 'normal'|'patologico', model_version: str} or None.
+    Run local MLP inference on organ_analysis measurements + optional population context.
+    Returns {probability, label, model_version, used_population_context} or None.
     """
     import numpy as np
 
@@ -183,14 +220,8 @@ def predict_from_organ_analysis(specialty: str, organ_analysis: dict) -> dict | 
 
     session, scaler, imputer, feature_names = bundle
 
-    flat = {}
-    for organ, measurements in organ_analysis.items():
-        if not isinstance(measurements, dict):
-            continue
-        for key, val in measurements.items():
-            flat[f"{organ}__{key}"] = float(val) if val is not None else float("nan")
-
-    X = np.array([[flat.get(f, float("nan")) for f in feature_names]], dtype=np.float32)
+    row = _build_feature_row(organ_analysis, feature_names, population_context)
+    X = np.array([row], dtype=np.float32)
     X = imputer.transform(X).astype(np.float32)
     X = scaler.transform(X).astype(np.float32)
 
@@ -199,7 +230,8 @@ def predict_from_organ_analysis(specialty: str, organ_analysis: dict) -> dict | 
 
     versions = load_local_versions()
     return {
-        "probability": round(prob, 4),
-        "label":       label,
-        "model_version": versions.get(specialty, "unknown"),
+        "probability":             round(prob, 4),
+        "label":                   label,
+        "model_version":           versions.get(specialty, "unknown"),
+        "used_population_context": population_context is not None,
     }
