@@ -7,6 +7,7 @@ import asyncio
 import base64
 import httpx
 from datetime import datetime
+from pathlib import Path
 import secrets
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, UploadFile, File, Form, Depends
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
@@ -33,12 +34,26 @@ from services.sync_service import sync_service
 from services.rag_service import rag_service
 from model_updater import run_ota_check, predict_from_organ_analysis
 
-# Configuración de Sesión Activa (Especialidad por defecto para estudios automáticos)
-ACTIVE_CONFIG = {
-    "specialty": "general",
-    "clinical_context": "",
-    "technician_name": "Técnico de Guardia"
-}
+# Configuración de Sesión Activa — persiste en disco para sobrevivir reinicios
+_CONFIG_FILE = Path(os.path.dirname(os.path.abspath(__file__))) / "active_config.json"
+
+def _load_config() -> dict:
+    defaults = {"specialty": "general", "clinical_context": "", "technician_name": "Técnico de Guardia"}
+    try:
+        if _CONFIG_FILE.exists():
+            saved = json.loads(_CONFIG_FILE.read_text())
+            defaults.update(saved)
+    except Exception:
+        pass
+    return defaults
+
+def _save_config(cfg: dict):
+    try:
+        _CONFIG_FILE.write_text(json.dumps(cfg, ensure_ascii=False, indent=2))
+    except Exception as e:
+        pass
+
+ACTIVE_CONFIG = _load_config()
 
 # Configuración de logs
 logging.basicConfig(level=logging.INFO)
@@ -450,11 +465,12 @@ async def get_gateway_config():
 
 @app.post("/api/config")
 async def update_gateway_config(config: dict):
-    """Actualiza la especialidad o contexto para los próximos estudios."""
+    """Actualiza la especialidad o contexto y persiste en disco."""
     global ACTIVE_CONFIG
     ACTIVE_CONFIG["specialty"] = config.get("specialty", ACTIVE_CONFIG["specialty"])
     ACTIVE_CONFIG["clinical_context"] = config.get("clinical_context", ACTIVE_CONFIG["clinical_context"])
-    logger.info(f"⚙️ Configuración actualizada: {ACTIVE_CONFIG['specialty']}")
+    _save_config(ACTIVE_CONFIG)
+    logger.info(f"⚙️ Configuración actualizada y guardada: {ACTIVE_CONFIG['specialty']}")
     return {"status": "success", "config": ACTIVE_CONFIG}
 
 @app.get("/api/specialties")

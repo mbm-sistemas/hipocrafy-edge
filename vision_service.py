@@ -133,7 +133,7 @@ def analyze_with_gemini(
     if not api_key:
         return {"error": "Missing GEMINI_API_KEY in .env"}
         
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
     
     # Construir el prompt parametrizado por especialidad
     prompt = build_specialty_prompt(
@@ -386,7 +386,7 @@ def get_synthesis_prompt(ai_data, specialty_name):
 def synthesize_report_with_gemini(ai_data):
     logger.info("[*] Gemini LLM: Synthesizing medical report...")
     api_key = os.getenv("GEMINI_API_KEY", "")
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
     specialty_name = ai_data.get('specialty', 'General')
     
     try:
