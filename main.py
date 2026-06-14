@@ -273,11 +273,19 @@ async def process_and_sync(study_id: str):
             "X-Gateway-Token": API_TOKEN,
             "Authorization": f"Bearer {API_TOKEN}"
         }
+        organ_analysis = findings.get("organ_analysis") if isinstance(findings, dict) else None
         payload = {
             "patient_document": mock_dni,
             "study_date": datetime.now().isoformat(),
             "modality": mock_modality,
-            "ai_findings": findings
+            "organ_analysis": organ_analysis,
+            "ai_findings": {
+                "finding":    findings.get("clinical_correlation", "Sin hallazgos") if isinstance(findings, dict) else str(findings),
+                "confidence": findings.get("confidence", 0.0) if isinstance(findings, dict) else 0.0,
+                "anomalies":  findings.get("critical_findings", []) if isinstance(findings, dict) else [],
+                "specialty":  findings.get("specialty", mock_modality) if isinstance(findings, dict) else mock_modality,
+                "report":     findings.get("report", "") if isinstance(findings, dict) else "",
+            }
         }
 
         async with httpx.AsyncClient() as client:
