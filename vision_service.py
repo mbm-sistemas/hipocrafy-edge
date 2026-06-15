@@ -157,9 +157,11 @@ def analyze_with_gemini(
             }]
         }
         
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=30.0)
+        if not response.text.strip():
+            raise Exception("Gemini returned empty response — check API key format (must start with AIza)")
         resp_json = response.json()
-        
+
         if response.status_code != 200:
             logger.error(f"Gemini API Error: {resp_json}")
             raise Exception(f"HTTP {response.status_code}: {resp_json.get('error', {}).get('message', 'Error')}")
@@ -304,7 +306,7 @@ def analyze_with_ollama(
             "keep_alive": 0
         }
         
-        response = requests.post(url, json=payload, timeout=60.0)
+        response = requests.post(url, json=payload, timeout=180.0)
         resp_json = response.json()
         
         if response.status_code != 200:

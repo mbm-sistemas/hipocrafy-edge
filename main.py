@@ -914,7 +914,7 @@ async def local_deepseek_proxy(request: Request):
                     "stream": False
                 }
                 # Ollama's own OpenAI compatibility endpoint is at /v1/chat/completions
-                resp = await client.post(f"{ollama_url}/v1/chat/completions", json=ollama_payload, timeout=60.0)
+                resp = await client.post(f"{ollama_url}/v1/chat/completions", json=ollama_payload, timeout=180.0)
                 if resp.status_code == 200:
                     logger.info("Successfully fetched response from local Ollama")
                     return resp.json()
