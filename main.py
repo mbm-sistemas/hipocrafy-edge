@@ -398,7 +398,15 @@ async def get_local_study(uid: str):
 
 async def poll_orthanc():
     """Revisa periódicamente si hay estudios nuevos en Orthanc."""
-    processed_instances = set()
+    # Cargar instancias ya procesadas desde SQLite para sobrevivir reinicios del servicio
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            rows = conn.execute("SELECT study_instance_uid FROM local_studies").fetchall()
+            processed_instances = {row[0] for row in rows}
+            logger.info(f"📡 {len(processed_instances)} instancias ya procesadas cargadas desde SQLite.")
+    except Exception as e:
+        processed_instances = set()
+        logger.warning(f"No se pudo cargar historial de SQLite: {e}")
     logger.info("📡 Iniciando monitoreo de Orthanc para estudios del ecógrafo...")
     
     while True:
