@@ -218,6 +218,35 @@ def update_sync_status(uid, status):
             conn.execute("UPDATE local_studies SET sync_status = ? WHERE study_instance_uid = ?", (status, uid))
 
 
+async def report_ai_event(event_type: str, severity: str, message: str,
+                          engine: str | None = None, study_uid: str | None = None,
+                          metadata: dict | None = None):
+    """
+    Reporta un evento de error IA al cloud para que el admin lo vea en el panel.
+    Falla silenciosamente para no interrumpir el flujo principal.
+    """
+    if not API_TOKEN:
+        return
+    try:
+        payload = {
+            "event_type": event_type,
+            "severity":   severity,
+            "engine":     engine,
+            "study_uid":  study_uid,
+            "message":    message[:2000],
+            "metadata":   metadata or {},
+        }
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                f"{CLOUD_URL}/events",
+                json=payload,
+                headers={"Authorization": f"Bearer {API_TOKEN}"},
+                timeout=8.0,
+            )
+    except Exception as e:
+        logger.warning(f"No se pudo reportar evento al cloud: {e}")
+
+
 # ═══════════════════════════════════════════════════════════
 #  LÓGICA DE NEGOCIO
 # ═══════════════════════════════════════════════════════════
@@ -272,9 +301,26 @@ async def process_and_sync(study_id: str):
             findings = analyze_study(image_path=img_path, patient_id=mock_dni, specialty=specialty)
             findings = _enrich_with_local_model(findings, specialty)
             logger.info(f"Resultados IA (webhook): {findings.get('specialty')} — confianza {findings.get('confidence')}")
+
+            # Reportar errores o fallbacks al cloud
+            if isinstance(findings, dict) and "_event_meta" in findings:
+                em = findings["_event_meta"]
+                await report_ai_event(
+                    event_type=em.get("event_type", "ai_error"),
+                    severity=em.get("severity", "warning"),
+                    message=findings.get("error", f"Fallback activado: {em.get('engine')}"),
+                    engine=em.get("engine"),
+                    study_uid=study_id,
+                    metadata=em.get("metadata"),
+                )
+
         except Exception as ai_err:
             logger.error(f"Error en análisis IA (webhook): {ai_err}")
             findings = {"error": str(ai_err), "confidence": 0.0, "organ_analysis": [], "critical_findings": []}
+            from vision_service import classify_ai_error
+            em = classify_ai_error(str(ai_err), "unknown")
+            await report_ai_event(event_type=em["event_type"], severity=em["severity"],
+                                  message=str(ai_err), study_uid=study_id, metadata=em.get("metadata"))
 
         # 3. Persistir Localmente (Para uso sin internet)
         save_local_study(study_id, mock_dni, mock_modality, findings)
@@ -483,9 +529,21 @@ async def process_dicom_instance(instance_id):
             )
             findings = _enrich_with_local_model(findings, ACTIVE_CONFIG["specialty"])
 
+            # Reportar errores o fallbacks al cloud
+            if isinstance(findings, dict) and "_event_meta" in findings:
+                em = findings["_event_meta"]
+                asyncio.create_task(report_ai_event(
+                    event_type=em.get("event_type", "ai_error"),
+                    severity=em.get("severity", "warning"),
+                    message=findings.get("error", f"Fallback activado: {em.get('engine')}"),
+                    engine=em.get("engine"),
+                    study_uid=instance_id,
+                    metadata=em.get("metadata"),
+                ))
+
             # Generar informe formal
             report = synthesize_report(findings) if not findings.get("error") else None
-            
+
             # 4. Guardar local y Sincronizar
             save_local_study(instance_id, patient_dni, modality, findings, f"static/previews/{instance_id}.jpg")
             if API_TOKEN:
@@ -705,6 +763,13 @@ async def sync_study_to_cloud(study_id, dni, modality, findings, image_base64=No
         except Exception as e:
             logger.error(f"Error sincronizando captura: {e}")
             update_sync_status(study_id, "failed")
+            await report_ai_event(
+                event_type="sync_failed",
+                severity="warning",
+                message=str(e)[:500],
+                study_uid=study_id,
+                metadata={"cloud_url": CLOUD_URL},
+            )
 
 @app.post("/orthanc-webhook")
 async def orthanc_webhook(request: Request, background_tasks: BackgroundTasks):

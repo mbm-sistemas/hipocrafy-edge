@@ -16,6 +16,28 @@ except ImportError as e:
 logger = logging.getLogger("HipocrafyVision")
 
 
+def classify_ai_error(exception_str: str, engine: str, http_status: int | None = None) -> dict:
+    """
+    Clasifica un error de IA en event_type + severity para reportar al cloud.
+    Retorna dict con: event_type, severity, metadata.
+    """
+    s = (exception_str or "").lower()
+    status = http_status or 0
+
+    # Determinar tipo y severidad según el HTTP status y el texto del error
+    if status in (401, 403) or "401" in s or "403" in s or "unauthorized" in s or "api key" in s or "permission" in s:
+        return {"event_type": "auth_failed",        "severity": "critical", "metadata": {"http_status": status, "detail": exception_str[:300]}}
+    if status in (402, 429) or "402" in s or "429" in s or "quota" in s or "billing" in s or "credit" in s or "rate limit" in s or "resource_exhausted" in s:
+        return {"event_type": "quota_exhausted",    "severity": "critical", "metadata": {"http_status": status, "detail": exception_str[:300]}}
+    if status == 404 or "404" in s or "model" in s and ("not found" in s or "deprecated" in s or "unavailable" in s):
+        return {"event_type": "model_unavailable",  "severity": "warning",  "metadata": {"http_status": status, "detail": exception_str[:300]}}
+    if status in (500, 502, 503) or "timeout" in s or "timed out" in s or "connection" in s:
+        return {"event_type": "timeout",            "severity": "warning",  "metadata": {"http_status": status, "detail": exception_str[:300]}}
+    if "json" in s or "parse" in s or "decode" in s or "invalid" in s:
+        return {"event_type": "parse_error",        "severity": "warning",  "metadata": {"http_status": status, "detail": exception_str[:300]}}
+    return     {"event_type": "ai_error",           "severity": "warning",  "metadata": {"http_status": status, "detail": exception_str[:300]}}
+
+
 def analyze_study(
     image_path,
     patient_id="ANONYMIZED",
@@ -62,20 +84,41 @@ def analyze_study(
 
     call_args = (image_path, patient_id, specialty, combined_context, patient_age, patient_sex, dicom_metadata)
     last_error = None
+    last_event_meta = None
+    failed_engines = []
+
     for eng_name, fn in ordered:
         try:
             logger.info(f"[*] Intentando motor: {eng_name.upper()}...")
             result = fn(*call_args)
             if result and "error" not in result:
+                if failed_engines:
+                    # Al menos un motor falló antes — marcamos fallback para el reporte
+                    result["_event_meta"] = {
+                        "event_type": "fallback_activated",
+                        "severity":   "info",
+                        "engine":     eng_name,
+                        "metadata":   {"failed_engines": failed_engines},
+                    }
                 logger.info(f"[+] Motor {eng_name.upper()} respondió exitosamente.")
                 return result
             last_error = result.get("error", "respuesta vacía")
+            last_event_meta = result.get("_event_meta") or classify_ai_error(last_error, eng_name)
+            last_event_meta["engine"] = eng_name
+            failed_engines.append(eng_name)
             logger.warning(f"[!] {eng_name.upper()} devolvió error: {last_error}. Probando siguiente motor.")
         except Exception as e:
             last_error = str(e)
+            last_event_meta = classify_ai_error(last_error, eng_name)
+            last_event_meta["engine"] = eng_name
+            failed_engines.append(eng_name)
             logger.warning(f"[!] {eng_name.upper()} falló con excepción: {e}. Probando siguiente motor.")
 
     logger.error(f"[X] Todos los motores de IA fallaron. Último error: {last_error}")
+    event_meta = last_event_meta or {"event_type": "ai_error", "severity": "critical", "engine": None, "metadata": {}}
+    event_meta["event_type"] = "ai_error"
+    event_meta["severity"]   = "critical"
+    event_meta["metadata"]   = {**(event_meta.get("metadata") or {}), "failed_engines": failed_engines}
     return {
         "specialty": specialty,
         "area_anatomica": "no evaluable",
@@ -84,7 +127,8 @@ def analyze_study(
         "critical_findings": [],
         "recommendations": ["Reintentar el análisis cuando se restablezca la conectividad."],
         "confidence": 0.0,
-        "error": f"Todos los motores fallaron: {last_error}"
+        "error": f"Todos los motores fallaron: {last_error}",
+        "_event_meta": event_meta,
     }
 
 
@@ -165,18 +209,19 @@ def analyze_with_gemini(
         if response.status_code != 200:
             logger.error(f"Gemini API Error: {resp_json}")
             raise Exception(f"HTTP {response.status_code}: {resp_json.get('error', {}).get('message', 'Error')}")
-            
+
         text = resp_json['candidates'][0]['content']['parts'][0]['text'].strip()
         if text.startswith('```json'): text = text[7:]
         if text.endswith('```'): text = text[:-3]
         text = text.strip()
-            
+
         data = json.loads(text)
         logger.info(f"[*] Vision Analysis ({specialty}): {json.dumps(data, ensure_ascii=False)[:200]}...")
         return data
     except Exception as e:
         logger.error(f"Error in Gemini analysis: {e}")
-        return {"error": str(e)}
+        http_status = getattr(getattr(e, 'response', None), 'status_code', None)
+        return {"error": str(e), "_event_meta": classify_ai_error(str(e), "gemini", http_status)}
 
 
 def analyze_with_deepseek(
@@ -254,7 +299,7 @@ def analyze_with_deepseek(
             logger.warning(f"[!] DeepSeek endpoint {endpoint} falló: {e}. Probando siguiente.")
 
     logger.error(f"Error in DeepSeek analysis: {last_error}")
-    return {"error": last_error}
+    return {"error": last_error, "_event_meta": classify_ai_error(str(last_error), "deepseek")}
 
 
 def analyze_with_ollama(
