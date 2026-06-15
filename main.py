@@ -274,11 +274,19 @@ async def process_and_sync(study_id: str):
             "Authorization": f"Bearer {API_TOKEN}"
         }
         organ_analysis = findings.get("organ_analysis") if isinstance(findings, dict) else None
+
+        image_base64 = None
+        if img_path and os.path.exists(img_path):
+            import base64
+            with open(img_path, "rb") as f:
+                image_base64 = base64.b64encode(f.read()).decode("utf-8")
+
         payload = {
             "patient_document": mock_dni,
             "study_date": datetime.now().isoformat(),
             "modality": mock_modality,
             "organ_analysis": organ_analysis,
+            "image_base64": image_base64,
             "ai_findings": {
                 "finding":    findings.get("clinical_correlation", "Sin hallazgos") if isinstance(findings, dict) else str(findings),
                 "confidence": findings.get("confidence", 0.0) if isinstance(findings, dict) else 0.0,
