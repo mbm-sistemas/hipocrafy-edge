@@ -173,6 +173,10 @@ def _require_settings_auth(credentials: HTTPBasicCredentials = Depends(_http_bas
 # ═══════════════════════════════════════════════════════════
 DB_PATH = os.path.join(BASE_DIR, "edge_data.db")
 
+# Configuración de limpieza de Orthanc
+ORTHANC_AUTO_CLEANUP    = os.getenv("ORTHANC_AUTO_CLEANUP", "false").lower() == "true"
+ORTHANC_RETENTION_HOURS = int(os.getenv("ORTHANC_RETENTION_HOURS", "24"))
+
 def init_db():
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute("""
@@ -184,9 +188,15 @@ def init_db():
                 ai_findings TEXT,
                 image_path TEXT,
                 sync_status TEXT DEFAULT 'pending',
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                synced_at DATETIME
             )
         """)
+        # Migración: agregar synced_at si no existe
+        try:
+            conn.execute("ALTER TABLE local_studies ADD COLUMN synced_at DATETIME")
+        except Exception:
+            pass
 
 init_db()
 
@@ -199,7 +209,13 @@ def save_local_study(uid, dni, modality, findings, image_path=None):
 
 def update_sync_status(uid, status):
     with sqlite3.connect(DB_PATH) as conn:
-        conn.execute("UPDATE local_studies SET sync_status = ? WHERE study_instance_uid = ?", (status, uid))
+        if status == "synced":
+            conn.execute(
+                "UPDATE local_studies SET sync_status = ?, synced_at = ? WHERE study_instance_uid = ?",
+                (status, datetime.now().isoformat(), uid)
+            )
+        else:
+            conn.execute("UPDATE local_studies SET sync_status = ? WHERE study_instance_uid = ?", (status, uid))
 
 
 # ═══════════════════════════════════════════════════════════
@@ -476,9 +492,69 @@ async def process_dicom_instance(instance_id):
                 # Sincronizar en segundo plano (no bloquea el polling)
                 asyncio.create_task(sync_study_to_cloud(instance_id, patient_dni, modality, findings, encoded_image, specialty=ACTIVE_CONFIG["specialty"]))
 
+async def _do_orthanc_cleanup() -> dict:
+    """Elimina de Orthanc los estudios sincronizados que superaron el período de retención."""
+    from datetime import timedelta
+    cutoff = (datetime.now() - timedelta(hours=ORTHANC_RETENTION_HOURS)).isoformat()
+    with sqlite3.connect(DB_PATH) as conn:
+        rows = conn.execute(
+            "SELECT study_instance_uid FROM local_studies WHERE sync_status = 'synced' AND synced_at <= ?",
+            (cutoff,)
+        ).fetchall()
+
+    deleted, errors = 0, 0
+    async with httpx.AsyncClient(auth=ORTHANC_AUTH) as client:
+        for (uid,) in rows:
+            try:
+                resp = await client.delete(f"{ORTHANC_URL}/instances/{uid}", timeout=10.0)
+                if resp.status_code in (200, 404):
+                    update_sync_status(uid, "cleaned")
+                    deleted += 1
+                else:
+                    errors += 1
+            except Exception:
+                errors += 1
+
+    logger.info(f"[🧹] Limpieza Orthanc: {deleted} eliminados, {errors} errores.")
+    return {"deleted": deleted, "errors": errors, "pending": len(rows)}
+
+
+async def _cleanup_loop():
+    """Tarea periódica — corre solo si AUTO_CLEANUP está habilitado."""
+    while True:
+        await asyncio.sleep(3600)
+        if ORTHANC_AUTO_CLEANUP:
+            await _do_orthanc_cleanup()
+
+
+@app.get("/api/cleanup/pending")
+async def cleanup_pending():
+    """Estudios sincronizados listos para ser eliminados de Orthanc."""
+    from datetime import timedelta
+    cutoff = (datetime.now() - timedelta(hours=ORTHANC_RETENTION_HOURS)).isoformat()
+    with sqlite3.connect(DB_PATH) as conn:
+        count = conn.execute(
+            "SELECT COUNT(*) FROM local_studies WHERE sync_status = 'synced' AND synced_at <= ?",
+            (cutoff,)
+        ).fetchone()[0]
+    return {
+        "pending": count,
+        "auto_cleanup": ORTHANC_AUTO_CLEANUP,
+        "retention_hours": ORTHANC_RETENTION_HOURS,
+    }
+
+
+@app.post("/api/cleanup/run")
+async def run_cleanup(_: None = Depends(_require_settings_auth)):
+    """Ejecuta la limpieza manualmente (requiere auth de settings)."""
+    result = await _do_orthanc_cleanup()
+    return result
+
+
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(poll_orthanc())
+    asyncio.create_task(_cleanup_loop())
     # OTA model check in background — non-blocking
     asyncio.get_event_loop().run_in_executor(None, run_ota_check)
 
