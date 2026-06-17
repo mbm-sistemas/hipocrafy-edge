@@ -4,25 +4,25 @@ Esta guía detalla los pasos para conectar tu ecógrafo Mindray Z50 al gateway d
 
 ## 1. Datos del Servidor (Hipocrafy Edge)
 Asegúrate de tener estos datos a mano antes de empezar:
-- **IP del Gateway**: [Obtener la IP de la Jetson/PC donde corre el gateway]
-- **AE Title**: `HIPOCRAFY_IA`
-- **Puerto**: `11112`
+- **IP del Gateway**: `192.168.0.192`
+- **AE Title**: `PACS`
+- **Puerto**: `4242`
 
 ## 2. Configuración en el Mindray Z50
 
 1.  **Acceder a Ajustes**: Presiona el botón **<Setup>** en el panel de control del ecógrafo.
 2.  **Red (Network)**: Ve a la pestaña **Network Preset** (o Ajustes de Red).
 3.  **Local Host**:
-    *   Verifica que el ecógrafo tenga una IP en el mismo rango que el Gateway.
+    *   Verifica que el ecógrafo tenga una IP en el mismo rango que el Gateway (`192.168.0.x`).
     *   Asigna un **AE Title** local (ej: `MINDRAY_Z50`).
 4.  **DICOM Preset**:
     *   Ve a la sección **DICOM Preset** o **DICOM Service**.
     *   Selecciona el servicio **Storage** (Almacenamiento) y haz clic en **Add** (Añadir).
 5.  **Configurar el Servicio**:
     *   **Service Name**: `Hipocrafy_IA`
-    *   **AE Title**: `HIPOCRAFY_IA` (Debe ser exacto)
-    *   **Port**: `11112`
-    *   **IP Address**: [La IP del Gateway]
+    *   **AE Title**: `PACS` (Debe ser exacto)
+    *   **Port**: `4242`
+    *   **IP Address**: `192.168.0.192`
 6.  **Verificación**:
     *   Haz clic en el botón **Verify** o **Ping**.
     *   Debería aparecer el mensaje: **"Verification Succeeded"**.
@@ -36,4 +36,4 @@ Para que la IA pueda procesar el estudio y vincularlo al paciente en la nube:
 - **Envío**: Al finalizar el estudio, selecciona las imágenes y elige la opción **Send to -> Hipocrafy_IA**.
 
 ---
-*Nota: Si el test de verificación falla, asegúrate de que no haya un firewall bloqueando el puerto 11112 en la computadora del gateway.*
+*Nota: Si el test de verificación falla, asegúrate de que no haya un firewall bloqueando el puerto 4242 en el gateway.*
