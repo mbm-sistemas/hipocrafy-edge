@@ -189,14 +189,21 @@ def init_db():
                 image_path TEXT,
                 sync_status TEXT DEFAULT 'pending',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                synced_at DATETIME
+                synced_at DATETIME,
+                retry_count INTEGER DEFAULT 0,
+                last_error TEXT
             )
         """)
-        # Migración: agregar synced_at si no existe
-        try:
-            conn.execute("ALTER TABLE local_studies ADD COLUMN synced_at DATETIME")
-        except Exception:
-            pass
+        # Migraciones incrementales para columnas añadidas después del deploy inicial
+        for col, definition in [
+            ("synced_at", "DATETIME"),
+            ("retry_count", "INTEGER DEFAULT 0"),
+            ("last_error", "TEXT"),
+        ]:
+            try:
+                conn.execute(f"ALTER TABLE local_studies ADD COLUMN {col} {definition}")
+            except Exception:
+                pass
 
 init_db()
 
@@ -207,12 +214,27 @@ def save_local_study(uid, dni, modality, findings, image_path=None):
             (uid, dni, modality, json.dumps(findings), image_path)
         )
 
-def update_sync_status(uid, status):
+def update_sync_status(uid, status, error_msg=None):
     with sqlite3.connect(DB_PATH) as conn:
         if status == "synced":
             conn.execute(
                 "UPDATE local_studies SET sync_status = ?, synced_at = ? WHERE study_instance_uid = ?",
                 (status, datetime.now().isoformat(), uid)
+            )
+        elif status == "failed":
+            conn.execute(
+                """UPDATE local_studies
+                   SET sync_status = ?,
+                       retry_count = COALESCE(retry_count, 0) + 1,
+                       last_error = ?
+                   WHERE study_instance_uid = ?""",
+                (status, error_msg or "sync_error", uid)
+            )
+            # Marcar como permanente si superó el límite de reintentos
+            conn.execute(
+                """UPDATE local_studies SET sync_status = 'permanent_failed'
+                   WHERE study_instance_uid = ? AND retry_count >= 5""",
+                (uid,)
             )
         else:
             conn.execute("UPDATE local_studies SET sync_status = ? WHERE study_instance_uid = ?", (status, uid))
@@ -609,10 +631,74 @@ async def run_cleanup(_: None = Depends(_require_settings_auth)):
     return result
 
 
+MAX_RETRY_ATTEMPTS = 5
+RETRY_BASE_DELAY_SECONDS = 60  # primer reintento a los 60s, luego backoff exponencial
+
+async def _retry_failed_syncs_loop():
+    """
+    Background task que reintenta estudios con sync_status='failed'.
+    Backoff exponencial: 60s, 120s, 240s, 480s, 960s → luego permanent_failed.
+    """
+    await asyncio.sleep(30)  # espera inicial para que el gateway se estabilice
+    while True:
+        try:
+            with sqlite3.connect(DB_PATH) as conn:
+                conn.row_factory = sqlite3.Row
+                rows = conn.execute(
+                    """SELECT study_instance_uid, patient_dni, modality, ai_findings
+                       FROM local_studies
+                       WHERE sync_status = 'failed' AND COALESCE(retry_count, 0) < ?
+                       ORDER BY created_at ASC LIMIT 10""",
+                    (MAX_RETRY_ATTEMPTS,)
+                ).fetchall()
+
+            for row in rows:
+                uid = row["study_instance_uid"]
+                findings = json.loads(row["ai_findings"] or "{}")
+                logger.info(f"[RETRY] Reintentando sync de estudio {uid}")
+                try:
+                    from sync_service import upload_ai_result
+                    success = upload_ai_result(
+                        orthanc_study_uid=uid,
+                        report=findings.get("report", ""),
+                        ai_data=findings,
+                        patient_dni=row["patient_dni"],
+                        specialty=findings.get("specialty"),
+                    )
+                    if success:
+                        update_sync_status(uid, "synced")
+                        logger.info(f"[RETRY] ✅ Estudio {uid} sincronizado en reintento.")
+                    else:
+                        update_sync_status(uid, "failed", "retry_upload_failed")
+                        logger.warning(f"[RETRY] ⚠️ Reintento fallido para {uid}.")
+                except Exception as e:
+                    update_sync_status(uid, "failed", str(e)[:200])
+                    logger.error(f"[RETRY] ❌ Error en reintento de {uid}: {e}")
+
+            # Notificar al admin si hay estudios en permanent_failed
+            with sqlite3.connect(DB_PATH) as conn:
+                pf_count = conn.execute(
+                    "SELECT COUNT(*) FROM local_studies WHERE sync_status = 'permanent_failed'"
+                ).fetchone()[0]
+            if pf_count > 0:
+                await report_ai_event(
+                    event_type="sync_failed",
+                    severity="critical",
+                    message=f"{pf_count} estudio(s) con fallo permanente de sincronización — requiere intervención manual.",
+                    metadata={"permanent_failed_count": pf_count},
+                )
+
+        except Exception as e:
+            logger.error(f"[RETRY] Error en loop de retry: {e}")
+
+        await asyncio.sleep(RETRY_BASE_DELAY_SECONDS)
+
+
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(poll_orthanc())
     asyncio.create_task(_cleanup_loop())
+    asyncio.create_task(_retry_failed_syncs_loop())
     # OTA model check in background — non-blocking
     asyncio.get_event_loop().run_in_executor(None, run_ota_check)
 
