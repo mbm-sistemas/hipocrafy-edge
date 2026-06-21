@@ -397,34 +397,33 @@ def synthesize_report(ai_data):
 
 
 def get_synthesis_prompt(ai_data, specialty_name):
+    tech_desc = ai_data.get("technical_description", "")
+    tech_section = f"\n    **Descripción técnica (generada automáticamente):**\n    {tech_desc}\n" if tech_desc else ""
+
     return f"""
-    Actúa como un Médico Radiólogo Senior. 
-    Genera un INFORME MÉDICO formal basado en los hallazgos de IA. 
-    Usa esta estructura profesional en Markdown:
-    
-    ### **INFORME DE ANÁLISIS DE IMAGEN MÉDICA**
-    **Estudio:** [Tipo de estudio detectado]
+    Actúa como un Médico Radiólogo Senior.
+    Genera la SECCIÓN MÉDICA del informe (hallazgos e impresión diagnóstica) en Markdown.
+    La descripción técnica ya fue generada por el sistema — NO la repitas.
+
+    ### HALLAZGOS E IMPRESIÓN DIAGNÓSTICA
     **Especialidad:** {specialty_name}
     **Región:** {ai_data.get('area_anatomica', '[Región detectada]')}
-    **Nivel de confianza:** [Alto/Medio/Bajo basado en el score de confianza]
-    
-    **1. Descripción del Estudio:**
-    [Descripción breve del corte y técnica basada en los hallazgos]
-    
-    **2. Hallazgos Clínicos:**
-    [Detallar cada órgano evaluado de la lista organ_analysis con sus hallazgos, estado y mediciones]
-    
-    **3. Hallazgos Críticos:**
-    [Detallar si hay hallazgos críticos de la lista critical_findings — resaltar en negrita. Si no hay, escribir 'Ninguno']
-    
-    **4. Impresión Diagnóstica / Conclusión:**
-    [Impresión final diagnóstica sintetizada]
-    
-    **5. Recomendaciones:**
-    [Estudios complementarios sugeridos de la lista recommendations]
-    
+    **Confianza IA:** [Alto/Medio/Bajo]
+    {tech_section}
+    **Hallazgos por órgano/estructura:**
+    [Detallar organ_analysis: estado, signos y mediciones de cada estructura evaluada]
+
+    **Hallazgos críticos:**
+    [Si hay critical_findings, resaltarlos en negrita. Si no, escribir "Sin hallazgos críticos."]
+
+    **Impresión diagnóstica:**
+    [Síntesis diagnóstica integrada — máximo 3 oraciones]
+
+    **Recomendaciones:**
+    [Estudios complementarios si corresponde]
+
     ---
-    *Nota: Este informe automatizado debe ser validado por el médico tratante en base a la clínica completa del paciente.*
+    *Informe automatizado — debe ser revisado y firmado por el médico tratante.*
 
     Datos del análisis: {json.dumps(ai_data, ensure_ascii=False)}
     """

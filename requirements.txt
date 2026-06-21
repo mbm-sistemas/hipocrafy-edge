@@ -12,6 +12,13 @@ python-multipart>=0.0.6
 cryptography>=41.0.0
 langchain-ollama>=0.1.0
 
+# ── BioMedCLIP — etiquetado y prompt engineering ─────────────────────────
+# En Jetson: torch y torchvision deben ser los builds JetPack ARM con CUDA.
+# Instalar antes: https://developer.nvidia.com/embedded/jetpack
+# luego: pip install open_clip_torch Pillow
+open_clip_torch>=2.24.0
+Pillow>=10.0.0
+
 # ── Enrollment Biométrico ──────────────────────────────────────────────────
 # PaddleOCR: en Jetson instalar primero paddlepaddle-gpu (build ARM)
 # Ver: https://www.paddlepaddle.org.cn/install/quick (seleccionar JetPack)
