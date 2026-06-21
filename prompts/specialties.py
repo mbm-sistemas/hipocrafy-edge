@@ -492,44 +492,62 @@ def build_specialty_prompt(
         measurements_note = ""
 
     prompt = f"""
-Actúa como un Especialista Senior en **{spec['display_name']}** con subespecialidad en Diagnóstico por Imagen.
-Tu objetivo es realizar un análisis clínico profundo y estructurado de la imagen médica proporcionada.
+Sos un sistema de análisis de diagnóstico por imágenes con dos roles diferenciados.
+Debés generar AMBAS secciones del informe.
 {patient_info}
 
 ═══════════════════════════════════════
-PROTOCOLO DE ANÁLISIS — {spec['display_name'].upper()}
+ROL 1 — DESCRIPCIÓN TÉCNICA (como técnico en imágenes)
+═══════════════════════════════════════
+Describí objetivamente lo que aparece en la imagen, sin interpretación clínica:
+- Modalidad de estudio y región anatómica
+- Calidad de imagen (buena / regular / limitada por artefactos)
+- Estructuras anatómicas visibles
+- Parámetros técnicos inferibles (profundidad, frecuencia aproximada, plano de corte)
+- Artefactos presentes si los hay (sombra acústica, reverberación, ruido)
+SIN hacer diagnóstico. Solo describir lo que se ve.
+
+═══════════════════════════════════════
+ROL 2 — ANÁLISIS MÉDICO (como especialista en {spec['display_name']})
 ═══════════════════════════════════════
 
-1. ÁREAS DE FOCO (Evaluar obligatoriamente):
+PROTOCOLO DE ANÁLISIS — {spec['display_name'].upper()}
+
+1. ÁREAS DE FOCO:
 {focus}
 
-2. SIGNOS PATOLÓGICOS A BUSCAR (Detección activa):
+2. SIGNOS PATOLÓGICOS A BUSCAR:
 {signs}
 
-3. MEDICIONES CLÍNICAS (Estimar si la imagen lo permite):
+3. MEDICIONES CLÍNICAS:
 {measurements}
 
-4. BANDERAS ROJAS (Hallazgos de acción inmediata):
+4. BANDERAS ROJAS:
 {red_flags}
 
-═══════════════════════════════════════
-INSTRUCCIONES TÉCNICAS
-═══════════════════════════════════════
-- Correlaciona los hallazgos con el contexto clínico del paciente si fue proporcionado.
-- Distingue artefactos técnicos (sombras acústicas, reverberación) de patología real.
-- Si la calidad de imagen no permite evaluar una estructura, indicalo explícitamente.
-- NO inventes hallazgos. Si no ves patología, indicá "Sin hallazgos patológicos significativos".
+INSTRUCCIONES:
+- Correlaciona con el contexto clínico del paciente si fue proporcionado.
+- Distingue artefactos de patología real.
+- NO inventes hallazgos. Si no hay patología: "Sin hallazgos patológicos significativos".
 {measurements_note}
 
-Responde estrictamente en JSON con esta estructura:
+═══════════════════════════════════════
+FORMATO DE RESPUESTA (JSON estricto)
+═══════════════════════════════════════
 {{
+    "technical_description": "descripción técnica objetiva en 2-4 oraciones, en español, como la escribiría un técnico en imágenes",
     "specialty": "{specialty}",
     "area_anatomica": "región evaluada",
-    "clinical_correlation": "correlación con el contexto clínico (si fue proporcionado)",
+    "finding": "hallazgo principal en una frase",
+    "pathology_status": "red | yellow | green",
+    "report": "informe médico detallado con hallazgos e impresión diagnóstica, 3-6 oraciones",
+    "clinical_correlation": "correlación con el contexto clínico si fue proporcionado",
     "organ_analysis": {organ_analysis_example},
     "critical_findings": ["hallazgos que requieren acción inmediata"],
-    "recommendations": ["sugerencias de estudios complementarios si corresponde"],
-    "confidence": 0.0 a 1.0
+    "recommendations": ["estudios complementarios si corresponde"],
+    "confidence": 0.0
 }}
+
+pathology_status: "red" = hallazgo crítico / urgente. "yellow" = hallazgo moderado / requiere seguimiento. "green" = normal o sin hallazgos significativos.
 """
     return prompt.strip()

@@ -29,6 +29,7 @@ from api.routes_chat import router as chat_router
 from api.routes_audio import router as audio_router
 from api.routes_sync import router as sync_router
 from api.routes_enrollment import router as enrollment_router
+from api.routes_clip import router as clip_router
 from enrollment.face_match import init_biometric_db
 from prompts.specialties import get_specialty_names
 from vision_service import analyze_study, synthesize_report
@@ -426,6 +427,7 @@ app.include_router(chat_router)
 app.include_router(audio_router)
 app.include_router(sync_router)
 app.include_router(enrollment_router)
+app.include_router(clip_router)
 
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
