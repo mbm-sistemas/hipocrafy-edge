@@ -28,6 +28,8 @@ ORTHANC_AUTH = (os.getenv("ORTHANC_USER", "orthanc"), os.getenv("ORTHANC_PASS", 
 from api.routes_chat import router as chat_router
 from api.routes_audio import router as audio_router
 from api.routes_sync import router as sync_router
+from api.routes_enrollment import router as enrollment_router
+from enrollment.face_match import init_biometric_db
 from prompts.specialties import get_specialty_names
 from vision_service import analyze_study, synthesize_report
 from services.sync_service import sync_service
@@ -423,6 +425,7 @@ async def process_and_sync(study_id: str):
 app.include_router(chat_router)
 app.include_router(audio_router)
 app.include_router(sync_router)
+app.include_router(enrollment_router)
 
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
@@ -696,6 +699,7 @@ async def _retry_failed_syncs_loop():
 
 @app.on_event("startup")
 async def startup_event():
+    init_biometric_db()
     asyncio.create_task(poll_orthanc())
     asyncio.create_task(_cleanup_loop())
     asyncio.create_task(_retry_failed_syncs_loop())
