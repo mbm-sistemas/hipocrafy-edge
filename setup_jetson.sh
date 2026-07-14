@@ -15,7 +15,7 @@ echo "========================================"
 # 1. Update system packages
 echo ">>> Updating system packages..."
 sudo apt-get update && sudo apt-get upgrade -y
-sudo apt-get install -y curl python3-pip python3-venv git htop jtop build-essential
+sudo apt-get install -y curl python3-pip python3-venv git htop build-essential
 
 # 2. Setup Python Virtual Environment
 echo ">>> Setting up Python virtual environment..."

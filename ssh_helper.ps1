@@ -6,6 +6,6 @@ $cmd = "mkdir -p ~/.ssh && echo '$pubkey' >> ~/.ssh/authorized_keys && chmod 700
 Write-Host "Attempting to copy SSH key to Jetson..."
 Write-Host "Please run this command manually in your terminal:"
 Write-Host ""
-Write-Host "ssh pmoraga@192.168.1.61 `"$cmd`""
+Write-Host "ssh pmoraga@192.168.1.66 `"$cmd`""
 Write-Host ""
 Write-Host "Enter password: Martiluc1317"
