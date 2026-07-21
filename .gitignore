@@ -8,3 +8,8 @@ __pycache__/
 *.sqlite3
 edge_data.db
 .DS_Store
+*.tar
+*.tar.gz
+jetson_env.txt
+*_env.txt
+*.log
