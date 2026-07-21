@@ -324,6 +324,10 @@ async def process_and_sync(study_id: str):
 
             specialty = ACTIVE_CONFIG["specialty"]
             findings = analyze_study(image_path=img_path, patient_id=mock_dni, specialty=specialty)
+            # Igual que en receive_capture: si specialty era "auto", analyze_study ya lo resolvió
+            # a la especialidad real dentro de findings — usar eso, no el sentinel original.
+            if isinstance(findings, dict) and findings.get("specialty"):
+                specialty = findings["specialty"]
             findings = _enrich_with_local_model(findings, specialty)
             logger.info(f"Resultados IA (webhook): {findings.get('specialty')} — confianza {findings.get('confidence')}")
 
@@ -375,11 +379,12 @@ async def process_and_sync(study_id: str):
             "organ_analysis": organ_analysis,
             "image_base64": image_base64,
             "ai_findings": {
-                "finding":    findings.get("clinical_correlation", "Sin hallazgos") if isinstance(findings, dict) else str(findings),
-                "confidence": findings.get("confidence", 0.0) if isinstance(findings, dict) else 0.0,
-                "anomalies":  findings.get("critical_findings", []) if isinstance(findings, dict) else [],
-                "specialty":  findings.get("specialty", mock_modality) if isinstance(findings, dict) else mock_modality,
-                "report":     findings.get("report", "") if isinstance(findings, dict) else "",
+                "finding":         findings.get("clinical_correlation", "Sin hallazgos") if isinstance(findings, dict) else str(findings),
+                "confidence":      findings.get("confidence", 0.0) if isinstance(findings, dict) else 0.0,
+                "anomalies":       findings.get("critical_findings", []) if isinstance(findings, dict) else [],
+                "specialty":       findings.get("specialty", mock_modality) if isinstance(findings, dict) else mock_modality,
+                "report":          findings.get("report", "") if isinstance(findings, dict) else "",
+                "pathology_status": findings.get("pathology_status") if isinstance(findings, dict) else None,
             }
         }
 
@@ -699,13 +704,30 @@ async def _retry_failed_syncs_loop():
         await asyncio.sleep(RETRY_BASE_DELAY_SECONDS)
 
 
+OTA_CHECK_INTERVAL_SECONDS = 6 * 60 * 60  # cada 6hs, como documenta model_updater.py
+
+async def _ota_check_loop():
+    """
+    Repite el chequeo OTA de modelos cada 6 horas. Antes de este fix, run_ota_check
+    solo se disparaba una vez al arrancar el proceso — un modelo nuevo no llegaba
+    al Jetson hasta que alguien reiniciara el servicio a mano.
+    """
+    while True:
+        await asyncio.sleep(OTA_CHECK_INTERVAL_SECONDS)
+        try:
+            await asyncio.get_event_loop().run_in_executor(None, run_ota_check)
+        except Exception as e:
+            logger.error(f"[OTA] Error en chequeo periódico: {e}")
+
+
 @app.on_event("startup")
 async def startup_event():
     init_biometric_db()
     asyncio.create_task(poll_orthanc())
     asyncio.create_task(_cleanup_loop())
     asyncio.create_task(_retry_failed_syncs_loop())
-    # OTA model check in background — non-blocking
+    asyncio.create_task(_ota_check_loop())
+    # OTA model check inmediato al arrancar — no bloqueante
     asyncio.get_event_loop().run_in_executor(None, run_ota_check)
 
 @app.get("/api/config")
@@ -796,6 +818,11 @@ async def receive_capture(
         patient_age=patient_age,
         patient_sex=patient_sex
     )
+    # analyze_study resuelve "auto" a la especialidad real internamente (detect_specialty),
+    # pero esa resolución solo vive en su scope local — hay que recuperarla de findings
+    # para no seguir arrastrando el sentinel "auto" al enriquecimiento local y al payload de sync.
+    if isinstance(findings, dict) and findings.get("specialty"):
+        effective_specialty = findings["specialty"]
     findings = _enrich_with_local_model(findings, effective_specialty)
 
     # Generar informe médico formal
@@ -833,7 +860,9 @@ async def receive_capture(
 async def sync_study_to_cloud(study_id, dni, modality, findings, image_base64=None, specialty=None):
     headers = {"Authorization": f"Bearer {API_TOKEN}"}
     organ_analysis = findings.get("organ_analysis") if isinstance(findings, dict) else None
-    resolved_specialty = specialty or (findings.get("specialty", "general") if isinstance(findings, dict) else "general")
+    resolved_specialty = findings.get("specialty") if (isinstance(findings, dict) and findings.get("specialty")) else specialty
+    if resolved_specialty == "auto" or not resolved_specialty:
+        resolved_specialty = "general"
     payload = {
         "patient_document": dni,
         "study_date": datetime.now().isoformat(),
@@ -841,10 +870,11 @@ async def sync_study_to_cloud(study_id, dni, modality, findings, image_base64=No
         "orthanc_study_id": study_id,
         "organ_analysis": organ_analysis,
         "ai_findings": {
-            "finding":    findings.get("clinical_correlation", "Sin hallazgos") if isinstance(findings, dict) else str(findings),
-            "confidence": findings.get("confidence", 0.0) if isinstance(findings, dict) else 0.0,
-            "anomalies":  findings.get("critical_findings", []) if isinstance(findings, dict) else [],
-            "specialty":  resolved_specialty,
+            "finding":         findings.get("clinical_correlation", "Sin hallazgos") if isinstance(findings, dict) else str(findings),
+            "confidence":      findings.get("confidence", 0.0) if isinstance(findings, dict) else 0.0,
+            "anomalies":       findings.get("critical_findings", []) if isinstance(findings, dict) else [],
+            "specialty":       resolved_specialty,
+            "pathology_status": findings.get("pathology_status") if isinstance(findings, dict) else None,
         },
         "image_base64": image_base64,
     }

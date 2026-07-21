@@ -35,7 +35,7 @@ def run_simulation(dni=None, specialty=None, image_file=None):
         
     # Setup parameters
     patient_dni = dni if dni else "30456789"
-    active_specialty = specialty if specialty else "radiología general"
+    active_specialty = specialty if specialty else "auto"
     
     print(f"\n==================================================")
     print(f"🚀 SIMULANDO ESTUDIO DESDE EL ECÓGRAFO")
@@ -46,7 +46,7 @@ def run_simulation(dni=None, specialty=None, image_file=None):
     print(f"==================================================\n")
     
     # Upload image to local gateway endpoint
-    url = "http://localhost:8080/api/capture"
+    url = "http://edge02-cegin:8080/api/capture"
     
     files = {
         "image": (os.path.basename(chosen_image), open(chosen_image, "rb"), "image/jpeg")

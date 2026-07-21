@@ -5,14 +5,14 @@
 # cambios locales al Jetson Orin Nano y reiniciarlo.
 
 $User = "pmoraga"
-$HostName = "edge01.local"
+$HostName = "edge02-cegin"
 $RemoteDir = "/home/pmoraga/hipocrafy-edge"
 
 Write-Host "[*] Iniciando sincronizacion con Hipocrafy Edge ($HostName)..." -ForegroundColor Cyan
 
 # 1. Subir archivos modificados
 Write-Host "[*] Subiendo archivos..." -ForegroundColor Yellow
-scp -r main.py templates prompts data services core api vision_extractor.py vision_service.py update_edge.sh requirements.txt "${User}@${HostName}:${RemoteDir}/"
+scp -r main.py templates prompts data services core api enrollment vision_extractor.py vision_service.py gateway_production.py simulate_capture.py update_edge.sh setup_jetson.sh hipocrafy-edge.service requirements.txt "${User}@${HostName}:${RemoteDir}/"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "[OK] Archivos subidos correctamente." -ForegroundColor Green

@@ -36,6 +36,49 @@ def classify_ai_error(exception_str: str, engine: str, http_status: int | None =
     if "json" in s or "parse" in s or "decode" in s or "invalid" in s:
         return {"event_type": "parse_error",        "severity": "warning",  "metadata": {"http_status": status, "detail": exception_str[:300]}}
     return     {"event_type": "ai_error",           "severity": "warning",  "metadata": {"http_status": status, "detail": exception_str[:300]}}
+def detect_specialty(image_path, dicom_metadata=None) -> str:
+    """Detecta la especialidad médica basada en la imagen y metadatos DICOM."""
+    engine = os.getenv("ACTIVE_AI_ENGINE", "gemini").lower().strip()
+    logger.info(f"[*] detect_specialty: Intentando detectar con {engine}...")
+    
+    prompt = f"""
+    Eres un clasificador experto de imágenes médicas. 
+    Analiza esta imagen y los metadatos DICOM proporcionados.
+    
+    METADATOS DICOM:
+    {json.dumps(dicom_metadata) if dicom_metadata else 'No disponibles'}
+    
+    Identifica a qué especialidad corresponde este estudio.
+    DEBES responder ÚNICAMENTE con una de estas opciones exactas (sin comillas ni texto extra):
+    ginecologia, obstetricia, gastroenterologia, traumatologia, urologia, medicina_interna, pediatria, cardiologia, oftalmologia, neurologia, dermatologia, endocrinologia, otorrinolaringologia, reumatologia, cirugia_vascular, nefrologia, oncologia, general
+    
+    Si no estás seguro, responde: general
+    """
+    
+    try:
+        with open(image_path, "rb") as f:
+            encoded = base64.b64encode(f.read()).decode('utf-8')
+
+        if engine == "gemini":
+            api_key = os.getenv("GEMINI_API_KEY", "")
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+            payload = {"contents": [{"parts": [{"text": prompt}, {"inline_data": {"mime_type": "image/png", "data": encoded}}]}]}
+            resp = requests.post(url, json=payload, timeout=20.0).json()
+            ans = resp['candidates'][0]['content']['parts'][0]['text'].strip().lower()
+            return ans if ans else "general"
+            
+        elif engine == "ollama":
+            ollama_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+            model = os.getenv("LLM_MODEL", "llama3:8b")
+            url = f"{ollama_url}/v1/chat/completions"
+            payload = {"model": model, "messages": [{"role": "user", "content": prompt, "images": [encoded]}], "temperature": 0.1}
+            resp = requests.post(url, json=payload, timeout=60.0).json()
+            ans = resp['choices'][0]['message']['content'].strip().lower()
+            return ans if ans else "general"
+    except Exception as e:
+        logger.warning(f"Error detectando especialidad: {e}")
+    
+    return "general"
 
 
 def analyze_study(
@@ -52,6 +95,10 @@ def analyze_study(
     """
     engine = os.getenv("ACTIVE_AI_ENGINE", "gemini").lower().strip()
     logger.info(f"[*] analyze_study: Iniciando análisis con el motor '{engine}'...")
+    
+    if specialty == "auto":
+        specialty = detect_specialty(image_path, dicom_metadata)
+        logger.info(f"[*] Especialidad autodetectada: {specialty}")
     
     # ------------------ INYECTAR HISTORIAL RAG ------------------
     rag_context = ""
@@ -92,6 +139,8 @@ def analyze_study(
             logger.info(f"[*] Intentando motor: {eng_name.upper()}...")
             result = fn(*call_args)
             if result and "error" not in result:
+                # Inyectamos la especialidad resuelta en los resultados
+                result["specialty"] = specialty
                 if failed_engines:
                     # Al menos un motor falló antes — marcamos fallback para el reporte
                     result["_event_meta"] = {

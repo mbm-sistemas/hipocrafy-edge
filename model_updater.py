@@ -41,6 +41,26 @@ def _api_base() -> str:
     return base.rstrip("/") + "/api/edge-gateway"
 
 
+def _report_model_status(specialty: str, version: str):
+    """
+    Le avisa a la nube que este nodo corre esta especialidad+version.
+    Sin esto, el panel de despliegue no tiene forma de saber que nodos ya
+    actualizaron al modelo activo y cuales quedaron atras. Best-effort:
+    un fallo aca no debe interrumpir el chequeo/descarga de modelos.
+    """
+    try:
+        resp = requests.post(
+            f"{_api_base()}/model-status",
+            headers=_gateway_headers(),
+            json={"specialty": specialty, "version": version},
+            timeout=TIMEOUT,
+        )
+        if resp.status_code != 200:
+            logger.warning(f"No se pudo reportar model-status ({specialty} v{version}): HTTP {resp.status_code}")
+    except Exception as exc:
+        logger.warning(f"Error reportando model-status ({specialty} v{version}): {exc}")
+
+
 def load_local_versions() -> dict:
     if VERSION_FILE.exists():
         try:
@@ -122,6 +142,7 @@ def check_and_update(specialty: str) -> bool:
 
     if local_versions.get(specialty) == remote_version:
         logger.debug(f"Model {specialty} v{remote_version} already up-to-date.")
+        _report_model_status(specialty, remote_version)
         return False
 
     logger.info(f"New model available: {specialty} v{remote_version} (local={local_versions.get(specialty, 'none')})")
@@ -149,6 +170,7 @@ def check_and_update(specialty: str) -> bool:
 
     local_versions[specialty] = remote_version
     save_local_versions(local_versions)
+    _report_model_status(specialty, remote_version)
     logger.info(f"Model {specialty} updated to v{remote_version}")
     return True
 

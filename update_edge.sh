@@ -19,8 +19,7 @@ run_sudo() {
 }
 
 echo "=== 1. Deteniendo servicios temporariamente ==="
-run_sudo systemctl stop hipocrafy-dicom || true
-run_sudo systemctl stop hipocrafy-api || true
+run_sudo systemctl stop hipocrafy-edge || true
 
 echo "=== 2. Actualizando dependencias de Python ==="
 if [ -d "venv" ]; then
@@ -39,15 +38,14 @@ echo "=== 4. Recargando y reiniciando servicios systemd ==="
 run_sudo systemctl daemon-reload
 
 echo "Iniciando API de FastAPI..."
-run_sudo systemctl start hipocrafy-api
+run_sudo systemctl start hipocrafy-edge
 sleep 2
 
-echo "Iniciando Receptor DICOM..."
-run_sudo systemctl start hipocrafy-dicom
+echo "Iniciando Receptor DICOM (Orthanc)..."
+run_sudo docker compose up -d || run_sudo docker-compose up -d || true
 
 echo "=== 5. Estado de los servicios ==="
-run_sudo systemctl status hipocrafy-api --no-pager
-run_sudo systemctl status hipocrafy-dicom --no-pager
+run_sudo systemctl status hipocrafy-edge --no-pager
 
 echo "========================================="
 echo " ¡Hipocrafy Edge actualizado correctamente!"

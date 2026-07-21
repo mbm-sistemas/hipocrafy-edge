@@ -122,9 +122,7 @@ try:
             else:
                 # 1. Análisis de Visión Real
                 try:
-                    specialty = "radiología general"
-                    if "GINA" in called_aet.upper(): specialty = "ginecología y obstetricia"
-                    elif "DENT" in called_aet.upper(): specialty = "odontología"
+                    specialty = "auto"
                     
                     # --- MEJORA: Contexto Multimodal y Metadatos ---
                     clinical_context = get_patient_clinical_context(patient_id)
