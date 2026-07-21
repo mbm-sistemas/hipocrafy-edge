@@ -1,0 +1,80 @@
+nohup: no se tendrá en cuenta la entrada
+/home/pmoraga/hipocrafy-edge/services/rag_service.py:33: LangChainDeprecationWarning: The class `OllamaEmbeddings` was deprecated in LangChain 0.3.1 and will be removed in 1.0.0. An updated version of the class exists in the `langchain-ollama package and should be used instead. To use it run `pip install -U `langchain-ollama` and import as `from `langchain_ollama import OllamaEmbeddings``.
+  self.embeddings = OllamaEmbeddings(
+/home/pmoraga/hipocrafy-edge/services/rag_service.py:45: LangChainDeprecationWarning: The class `Chroma` was deprecated in LangChain 0.2.9 and will be removed in 1.0. An updated version of the class exists in the `langchain-chroma package and should be used instead. To use it run `pip install -U `langchain-chroma` and import as `from `langchain_chroma import Chroma``.
+  self.vector_store = Chroma(
+INFO:     Started server process [38671]
+INFO:     Waiting for application startup.
+INFO:hipocrafy-edge:📡 Iniciando monitoreo de Orthanc para estudios del ecógrafo...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+INFO:httpx:HTTP Request: GET http://localhost:8042/instances "HTTP/1.1 200 OK"
+INFO:hipocrafy-edge:📦 ¡Nuevo estudio DICOM detectado!: 05be1d54-96701b7c-905af136-35f4f3a2-d250175e
+INFO:httpx:HTTP Request: GET http://localhost:8042/instances/05be1d54-96701b7c-905af136-35f4f3a2-d250175e/tags "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://localhost:8042/instances/05be1d54-96701b7c-905af136-35f4f3a2-d250175e/preview "HTTP/1.1 200 OK"
+INFO:hipocrafy-edge:[*] Descargando historial clínico previo para DNI vAD7q3...
+INFO:HipocrafyOTA:No model available for specialty=ginecologia
+INFO:httpx:HTTP Request: GET https://qas.hipocrafy-api.mbmsistemas.com.ar/api/edge-gateway/sync/provide/vAD7q3 "HTTP/1.1 200 OK"
+INFO:hipocrafy-edge:[*] Historial clínico para DNI vAD7q3 descargado e ingerido.
+INFO:HipocrafyVision:[*] analyze_study: Iniciando análisis con el motor 'gemini'...
+INFO:HipocrafyVision:[*] Consultando RAG (Historial Clínico) para DNI: vAD7q3
+INFO:HipocrafyOTA:No model available for specialty=obstetricia
+INFO:HipocrafyOTA:No model available for specialty=medicina_interna
+INFO:HipocrafyOTA:No model available for specialty=general
+INFO:HipocrafyOTA:OTA check complete — all models up-to-date.
+INFO:httpx:HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+INFO:HipocrafyVision:[*] Historial clínico RAG obtenido exitosamente.
+INFO:HipocrafyVision:[*] Intentando motor: GEMINI...
+INFO:HipocrafyVision:[*] Gemini Vision: Análisis GINECOLOGIA para vAD7q3...
+INFO:HipocrafyVision:[*] Vision Analysis (ginecologia): {"specialty": "ginecologia", "area_anatomica": "Extremidad (posiblemente inferior/superior), no ginecológica", "clinical_correlation": "No se ha proporcionado un contexto clínico ginecológico. La imag...
+INFO:HipocrafyVision:[+] Motor GEMINI respondió exitosamente.
+[0;93m2026-06-15 16:22:30.973945036 [W:onnxruntime:Default, device_discovery.cc:164 DiscoverDevicesForPlatform] GPU device discovery failed: device_discovery.cc:89 ReadFileContents Failed to open file: "/sys/class/drm/card1/device/vendor"[m
+INFO:HipocrafyVision:[*] Gemini LLM: Synthesizing medical report...
+INFO:hipocrafy-edge:📦 ¡Nuevo estudio DICOM detectado!: 068a4cd7-5e6c00d7-80877000-0f55fe28-4de7f298
+INFO:httpx:HTTP Request: GET http://localhost:8042/instances/068a4cd7-5e6c00d7-80877000-0f55fe28-4de7f298/tags "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://localhost:8042/instances/068a4cd7-5e6c00d7-80877000-0f55fe28-4de7f298/preview "HTTP/1.1 200 OK"
+INFO:hipocrafy-edge:[*] Descargando historial clínico previo para DNI vAD7q3...
+INFO:httpx:HTTP Request: GET https://qas.hipocrafy-api.mbmsistemas.com.ar/api/edge-gateway/sync/provide/vAD7q3 "HTTP/1.1 200 OK"
+INFO:hipocrafy-edge:[*] Historial clínico para DNI vAD7q3 descargado e ingerido.
+INFO:HipocrafyVision:[*] analyze_study: Iniciando análisis con el motor 'gemini'...
+INFO:HipocrafyVision:[*] Consultando RAG (Historial Clínico) para DNI: vAD7q3
+INFO:httpx:HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+INFO:HipocrafyVision:[*] Historial clínico RAG obtenido exitosamente.
+INFO:HipocrafyVision:[*] Intentando motor: GEMINI...
+INFO:HipocrafyVision:[*] Gemini Vision: Análisis GINECOLOGIA para vAD7q3...
+ERROR:HipocrafyVision:Error in Gemini analysis: Expecting value: line 1 column 1 (char 0)
+WARNING:HipocrafyVision:[!] GEMINI devolvió error: Expecting value: line 1 column 1 (char 0). Probando siguiente motor.
+INFO:HipocrafyVision:[*] Intentando motor: DEEPSEEK...
+INFO:HipocrafyVision:[*] DeepSeek Cloud: Análisis GINECOLOGIA para vAD7q3...
+WARNING:HipocrafyVision:No se pudo contactar con vision_extractor local (HTTPConnectionPool(host='localhost', port=5001): Max retries exceeded with url: /extract (Caused by NewConnectionError("HTTPConnection(host='localhost', port=5001): Failed to establish a new connection: [Errno 111] Connection refused"))). Usando mock.
+INFO:HipocrafyVision:[*] DeepSeek → https://api.deepseek.com/v1/chat/completions
+INFO:HipocrafyVision:[+] Motor DEEPSEEK respondió exitosamente.
+INFO:HipocrafyVision:[*] Gemini LLM: Synthesizing medical report...
+INFO:hipocrafy-edge:📦 ¡Nuevo estudio DICOM detectado!: 087945b8-6ce5f99b-e6e51a53-6052172b-f405c93e
+INFO:httpx:HTTP Request: POST https://qas.hipocrafy-api.mbmsistemas.com.ar/api/edge-gateway/studies "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://localhost:8042/instances/087945b8-6ce5f99b-e6e51a53-6052172b-f405c93e/tags "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://localhost:8042/instances/087945b8-6ce5f99b-e6e51a53-6052172b-f405c93e/preview "HTTP/1.1 200 OK"
+INFO:hipocrafy-edge:[*] Descargando historial clínico previo para DNI vAD7q3...
+INFO:httpx:HTTP Request: GET https://qas.hipocrafy-api.mbmsistemas.com.ar/api/edge-gateway/sync/provide/vAD7q3 "HTTP/1.1 200 OK"
+INFO:hipocrafy-edge:[*] Historial clínico para DNI vAD7q3 descargado e ingerido.
+INFO:HipocrafyVision:[*] analyze_study: Iniciando análisis con el motor 'gemini'...
+INFO:HipocrafyVision:[*] Consultando RAG (Historial Clínico) para DNI: vAD7q3
+INFO:httpx:HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+INFO:HipocrafyVision:[*] Historial clínico RAG obtenido exitosamente.
+INFO:HipocrafyVision:[*] Intentando motor: GEMINI...
+INFO:HipocrafyVision:[*] Gemini Vision: Análisis GINECOLOGIA para vAD7q3...
+ERROR:HipocrafyVision:Error in Gemini analysis: Expecting value: line 1 column 1 (char 0)
+WARNING:HipocrafyVision:[!] GEMINI devolvió error: Expecting value: line 1 column 1 (char 0). Probando siguiente motor.
+INFO:HipocrafyVision:[*] Intentando motor: DEEPSEEK...
+INFO:HipocrafyVision:[*] DeepSeek Cloud: Análisis GINECOLOGIA para vAD7q3...
+WARNING:HipocrafyVision:No se pudo contactar con vision_extractor local (HTTPConnectionPool(host='localhost', port=5001): Max retries exceeded with url: /extract (Caused by NewConnectionError("HTTPConnection(host='localhost', port=5001): Failed to establish a new connection: [Errno 111] Connection refused"))). Usando mock.
+INFO:HipocrafyVision:[*] DeepSeek → https://api.deepseek.com/v1/chat/completions
+INFO:HipocrafyVision:[+] Motor DEEPSEEK respondió exitosamente.
+INFO:HipocrafyVision:[*] Gemini LLM: Synthesizing medical report...
+INFO:hipocrafy-edge:📦 ¡Nuevo estudio DICOM detectado!: 09fdd256-5f98d719-623ab26d-7bb74f32-d08b9824
+INFO:httpx:HTTP Request: POST https://qas.hipocrafy-api.mbmsistemas.com.ar/api/edge-gateway/studies "HTTP/1.1 200 OK"
+INFO:     Shutting down
+INFO:httpx:HTTP Request: GET http://localhost:8042/instances/09fdd256-5f98d719-623ab26d-7bb74f32-d08b9824/tags "HTTP/1.1 200 OK"
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [38671]
