@@ -92,7 +92,14 @@
             </div>
             <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                 <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Sincronización</h3>
+                {% if permanent_failed_count and permanent_failed_count > 0 %}
+                <p class="text-3xl font-bold text-rose-600">{{ permanent_failed_count }} atascado(s)</p>
+                <button onclick="retryFailedSyncs()" id="btn-retry-sync" class="mt-2 w-full bg-rose-50 text-rose-700 text-xs font-bold py-1.5 px-3 rounded-lg hover:bg-rose-100 transition-colors">
+                    Reintentar sincronización
+                </button>
+                {% else %}
                 <p class="text-3xl font-bold text-emerald-600">Activa</p>
+                {% endif %}
             </div>
             <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                 <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Puerto DICOM</h3>
@@ -214,6 +221,40 @@
                 alert("Error al guardar la configuración");
                 btn.innerHTML = originalText;
                 btn.disabled = false;
+            }
+        }
+
+        async function retryFailedSyncs() {
+            const btn = document.getElementById('btn-retry-sync');
+            const password = prompt('Contraseña de settings del gateway:');
+            if (!password) return;
+
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = 'Reintentando...';
+
+            try {
+                const response = await fetch('/api/sync/retry-failed', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Basic ' + btoa(':' + password) }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(data.requeued + ' estudio(s) re-encolado(s). Se van a reintentar en el próximo ciclo.');
+                    location.reload();
+                } else if (response.status === 401) {
+                    alert('Contraseña incorrecta.');
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                } else {
+                    alert('Error al re-encolar los estudios.');
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            } catch (error) {
+                alert('Error de conexión al re-encolar.');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
             }
         }
 

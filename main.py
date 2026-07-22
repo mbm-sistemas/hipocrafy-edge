@@ -440,10 +440,14 @@ async def dashboard(request: Request):
     with sqlite3.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         studies = conn.execute("SELECT * FROM local_studies ORDER BY created_at DESC LIMIT 20").fetchall()
-    
+        permanent_failed_count = conn.execute(
+            "SELECT COUNT(*) c FROM local_studies WHERE sync_status = 'permanent_failed'"
+        ).fetchone()["c"]
+
     return templates.TemplateResponse(request, "dashboard.html", context={
         "studies": studies,
-        "gateway_name": os.getenv("GATEWAY_NAME", "Nodo Local 01")
+        "gateway_name": os.getenv("GATEWAY_NAME", "Nodo Local 01"),
+        "permanent_failed_count": permanent_failed_count
     })
 
 
@@ -644,6 +648,12 @@ async def run_cleanup(_: None = Depends(_require_settings_auth)):
 MAX_RETRY_ATTEMPTS = 5
 RETRY_BASE_DELAY_SECONDS = 60  # primer reintento a los 60s, luego backoff exponencial
 
+# Ultimo conteo de permanent_failed ya reportado al cloud. Sin esto, el loop
+# reportaba un evento critico nuevo en CADA vuelta mientras hubiera algun
+# permanent_failed, aunque el numero no hubiera cambiado (1260+ eventos para
+# el mismo lote de 14 estudios atascados).
+_last_reported_pf_count = 0
+
 async def _retry_failed_syncs_loop():
     """
     Background task que reintenta estudios con sync_status='failed'.
@@ -685,23 +695,60 @@ async def _retry_failed_syncs_loop():
                     update_sync_status(uid, "failed", str(e)[:200])
                     logger.error(f"[RETRY] ❌ Error en reintento de {uid}: {e}")
 
-            # Notificar al admin si hay estudios en permanent_failed
+            # Notificar al admin solo cuando el conteo de permanent_failed SUBE —
+            # no en cada vuelta del loop mientras el numero se mantenga igual.
+            global _last_reported_pf_count
             with sqlite3.connect(DB_PATH) as conn:
                 pf_count = conn.execute(
                     "SELECT COUNT(*) FROM local_studies WHERE sync_status = 'permanent_failed'"
                 ).fetchone()[0]
-            if pf_count > 0:
+            if pf_count > _last_reported_pf_count:
                 await report_ai_event(
                     event_type="sync_failed",
                     severity="critical",
                     message=f"{pf_count} estudio(s) con fallo permanente de sincronización — requiere intervención manual.",
                     metadata={"permanent_failed_count": pf_count},
                 )
+            _last_reported_pf_count = pf_count
 
         except Exception as e:
             logger.error(f"[RETRY] Error en loop de retry: {e}")
 
         await asyncio.sleep(RETRY_BASE_DELAY_SECONDS)
+
+
+@app.get("/api/sync/failed-summary")
+async def sync_failed_summary():
+    """Conteo de estudios trabados, para mostrar en el dashboard local."""
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        pending = conn.execute(
+            "SELECT COUNT(*) c FROM local_studies WHERE sync_status = 'failed'"
+        ).fetchone()["c"]
+        permanent = conn.execute(
+            "SELECT COUNT(*) c FROM local_studies WHERE sync_status = 'permanent_failed'"
+        ).fetchone()["c"]
+    return {"pending_retry": pending, "permanent_failed": permanent}
+
+
+@app.post("/api/sync/retry-failed")
+async def retry_failed_studies(_: None = Depends(_require_settings_auth)):
+    """
+    Re-encola estudios en permanent_failed para que el loop de reintentos
+    los vuelva a intentar — sin esto, la unica forma de recuperarlos era
+    entrar por SSH y tocar la SQLite a mano.
+    """
+    global _last_reported_pf_count
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.execute(
+            "UPDATE local_studies SET sync_status = 'failed', retry_count = 0 "
+            "WHERE sync_status = 'permanent_failed'"
+        )
+        requeued = cursor.rowcount
+        conn.commit()
+    _last_reported_pf_count = 0
+    logger.info(f"[RETRY] {requeued} estudio(s) re-encolados manualmente desde permanent_failed.")
+    return {"requeued": requeued}
 
 
 OTA_CHECK_INTERVAL_SECONDS = 6 * 60 * 60  # cada 6hs, como documenta model_updater.py
