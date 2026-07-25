@@ -264,7 +264,120 @@ SPECIALTY_PROMPTS = {
         "focus_areas": ["Tiroides (tamaño, ecoestructura, nódulos)", "Paratiroides (adenomas)", "Glándulas suprarrenales (masas)", "Páncreas endocrino"],
         "pathology_signs": ["Nódulo tiroideo sólido (evaluar TI-RADS: microcalcificaciones, bordes irregulares, más alto que ancho)", "Bocio multinodular", "Tiroiditis de Hashimoto (ecoestructura heterogénea, hipoecoica)", "Adenoma paratiroideo (nódulo hipoecoico posterior a tiroides)", "Incidentaloma suprarrenal"],
         "measurements": ["Volumen tiroideo por lóbulo (normal: <18ml mujeres, <25ml hombres)", "Tamaño del nódulo dominante en 3 ejes", "Clasificación TI-RADS del nódulo"],
-        "red_flags": ["Nódulo TI-RADS 5 (alta sospecha de malignidad)", "Nódulo con invasión extratiroidea", "Adenoma suprarrenal >4cm (descartar carcinoma)"]
+        "red_flags": ["Nódulo TI-RADS 5 (alta sospecha de malignidad)", "Nódulo con invasión extratiroidea", "Adenoma suprarrenal >4cm (descartar carcinoma)"],
+        "organ_measurements_schema": {
+            "lobulo_derecho": {
+                "longitud_mm": None,
+                "ap_mm": None,
+                "transverso_mm": None,
+                "volumen_cc": None
+            },
+            "lobulo_izquierdo": {
+                "longitud_mm": None,
+                "ap_mm": None,
+                "transverso_mm": None,
+                "volumen_cc": None
+            },
+            "istmo": {
+                "espesor_mm": None
+            },
+            "nodulo_dominante": {
+                "dim1_mm": None,
+                "dim2_mm": None,
+                "dim3_mm": None
+            },
+            "adenopatia_cervical": {
+                "diametro_mayor_mm": None
+            }
+        }
+    },
+
+    "oncologia_mama": {
+        "display_name": "Oncología — Mama",
+        "focus_areas": [
+            "Parénquima mamario (ecoestructura, distribución glandular)",
+            "Lesión focal si presente (forma, orientación, márgenes, ecogenicidad)",
+            "Complejo areola-pezón",
+            "Ganglios axilares"
+        ],
+        "pathology_signs": [
+            "Nódulo sólido irregular, más alto que ancho (sospechoso)",
+            "Márgenes espiculados o angulados",
+            "Sombra acústica posterior en lesión sólida",
+            "Microcalcificaciones agrupadas",
+            "Adenopatía axilar con pérdida de hilio graso",
+            "Retracción cutánea o del complejo areola-pezón"
+        ],
+        "measurements": [
+            "Dimensiones de la lesión en 3 ejes",
+            "Distancia al pezón",
+            "Eje corto de ganglios axilares",
+            "Clasificación BI-RADS (2 a 6)"
+        ],
+        "red_flags": [
+            "Lesión BI-RADS 5 (alta probabilidad de malignidad)",
+            "Adenopatía axilar sospechosa asociada a lesión mamaria",
+            "Retracción cutánea o invasión de piel/pared torácica"
+        ],
+        "organ_measurements_schema": {
+            "mama_derecha": {
+                "lesion_dim1_mm": None,
+                "lesion_dim2_mm": None,
+                "lesion_dim3_mm": None,
+                "distancia_pezon_mm": None
+            },
+            "mama_izquierda": {
+                "lesion_dim1_mm": None,
+                "lesion_dim2_mm": None,
+                "lesion_dim3_mm": None,
+                "distancia_pezon_mm": None
+            },
+            "axila_derecha": {
+                "ganglio_eje_corto_mm": None
+            },
+            "axila_izquierda": {
+                "ganglio_eje_corto_mm": None
+            }
+        }
+    },
+
+    "oncologia_ganglios": {
+        "display_name": "Oncología — Ganglios y Partes Blandas",
+        "focus_areas": [
+            "Ganglios linfáticos superficiales (cervicales, axilares, inguinales)",
+            "Masas de tejidos blandos (subcutáneas, musculares)",
+            "Vascularización de la lesión (Doppler)",
+            "Planos de clivaje con estructuras adyacentes"
+        ],
+        "pathology_signs": [
+            "Ganglio redondeado (relación eje corto/largo >0.5)",
+            "Pérdida del hilio graso ecogénico",
+            "Vascularización periférica o caótica",
+            "Masa de partes blandas con bordes infiltrativos",
+            "Necrosis central en ganglio o masa"
+        ],
+        "measurements": [
+            "Eje corto y eje largo del ganglio en mm",
+            "Dimensiones de la masa en 3 ejes",
+            "Profundidad respecto a la piel"
+        ],
+        "red_flags": [
+            "Ganglio >2cm con necrosis central",
+            "Masa de partes blandas con invasión de estructuras vasculonerviosas",
+            "Adenopatías múltiples en distintas cadenas (sospecha linfoma/metástasis diseminada)"
+        ],
+        "organ_measurements_schema": {
+            "lesion_partes_blandas": {
+                "dim1_mm": None,
+                "dim2_mm": None,
+                "dim3_mm": None,
+                "profundidad_mm": None
+            },
+            "ganglio_regional": {
+                "eje_corto_mm": None,
+                "eje_largo_mm": None
+            }
+        }
     },
 
     "otorrinolaringologia": {

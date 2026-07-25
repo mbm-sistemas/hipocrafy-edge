@@ -50,8 +50,10 @@ def detect_specialty(image_path, dicom_metadata=None) -> str:
     
     Identifica a qué especialidad corresponde este estudio.
     DEBES responder ÚNICAMENTE con una de estas opciones exactas (sin comillas ni texto extra):
-    ginecologia, obstetricia, gastroenterologia, traumatologia, urologia, medicina_interna, pediatria, cardiologia, oftalmologia, neurologia, dermatologia, endocrinologia, otorrinolaringologia, reumatologia, cirugia_vascular, nefrologia, oncologia, general
-    
+    ginecologia, obstetricia, gastroenterologia, traumatologia, urologia, medicina_interna, pediatria, cardiologia, oftalmologia, neurologia, dermatologia, endocrinologia, otorrinolaringologia, reumatologia, cirugia_vascular, nefrologia, oncologia_mama, oncologia_ganglios, oncologia, general
+
+    oncologia_mama: lesión o control mamario. oncologia_ganglios: ganglios superficiales o masa de partes blandas.
+    Usa "oncologia" genérico solo si es un caso oncológico que no encaja en esas dos (ej. masa abdominal u ósea).
     Si no estás seguro, responde: general
     """
     
