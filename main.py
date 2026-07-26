@@ -36,6 +36,7 @@ from vision_service import analyze_study, synthesize_report
 from services.sync_service import sync_service
 from services.rag_service import rag_service
 from model_updater import run_ota_check, predict_from_organ_analysis
+from app_updater import run_app_ota_check
 
 # Configuración de Sesión Activa — persiste en disco para sobrevivir reinicios
 _CONFIG_FILE = Path(os.path.dirname(os.path.abspath(__file__))) / "active_config.json"
@@ -767,6 +768,20 @@ async def _ota_check_loop():
             logger.error(f"[OTA] Error en chequeo periódico: {e}")
 
 
+async def _app_ota_check_loop():
+    """
+    Igual que _ota_check_loop pero para el código de la app (no el modelo).
+    Ver app_updater.py: por defecto (AUTO_INSTALL_APP_UPDATES=false) solo detecta
+    y reporta una release nueva, no instala sola hasta activarlo a propósito.
+    """
+    while True:
+        await asyncio.sleep(OTA_CHECK_INTERVAL_SECONDS)
+        try:
+            await asyncio.get_event_loop().run_in_executor(None, run_app_ota_check)
+        except Exception as e:
+            logger.error(f"[APP OTA] Error en chequeo periódico: {e}")
+
+
 @app.on_event("startup")
 async def startup_event():
     init_biometric_db()
@@ -774,8 +789,10 @@ async def startup_event():
     asyncio.create_task(_cleanup_loop())
     asyncio.create_task(_retry_failed_syncs_loop())
     asyncio.create_task(_ota_check_loop())
+    asyncio.create_task(_app_ota_check_loop())
     # OTA model check inmediato al arrancar — no bloqueante
     asyncio.get_event_loop().run_in_executor(None, run_ota_check)
+    asyncio.get_event_loop().run_in_executor(None, run_app_ota_check)
 
 @app.get("/api/config")
 async def get_gateway_config():
