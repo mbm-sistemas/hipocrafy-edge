@@ -65,10 +65,16 @@ def _gateway_headers() -> dict:
 
 
 def _api_base() -> str:
-    base = CLOUD_URL
+    # HIPOCRAFY_CLOUD_URL normalmente ya viene con el path completo (ver el
+    # default de main.py: ".../api/edge-gateway") — main.py lo usa tal cual
+    # (f"{CLOUD_URL}/studies"). Antes esta función asumía que faltaba el sufijo
+    # y lo volvía a agregar, duplicando el path si CLOUD_URL ya lo traía.
+    base = CLOUD_URL.rstrip("/")
+    if base.endswith("/edge-gateway"):
+        return base
     if base.endswith("/api"):
-        base = base[:-4]
-    return base.rstrip("/") + "/api/edge-gateway"
+        return base + "/edge-gateway"
+    return base + "/api/edge-gateway"
 
 
 def _report_status(version: str, status: str, error: str | None = None):

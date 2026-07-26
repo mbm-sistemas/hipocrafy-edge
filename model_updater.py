@@ -35,10 +35,16 @@ def _gateway_headers() -> dict:
 
 
 def _api_base() -> str:
-    base = CLOUD_URL
+    # HIPOCRAFY_CLOUD_URL normalmente ya viene con el path completo (ver el
+    # default en main.py: ".../api/edge-gateway"), asi que esta funcion no
+    # debe volver a agregarlo — antes duplicaba el path cuando CLOUD_URL ya
+    # lo traia, rompiendo silenciosamente el chequeo OTA.
+    base = CLOUD_URL.rstrip("/")
+    if base.endswith("/edge-gateway"):
+        return base
     if base.endswith("/api"):
-        base = base[:-4]
-    return base.rstrip("/") + "/api/edge-gateway"
+        return base + "/edge-gateway"
+    return base + "/api/edge-gateway"
 
 
 def _report_model_status(specialty: str, version: str):
