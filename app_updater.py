@@ -263,3 +263,13 @@ def run_app_ota_check() -> bool:
     except Exception as exc:
         logger.error(f"Error inesperado en chequeo de app OTA: {exc}")
         return False
+
+
+if __name__ == "__main__":
+    # Corre como proceso standalone (systemd timer: hipocrafy-app-updater.service),
+    # NUNCA embebido en main.py. Si estuviera embebido, el propio "systemctl restart
+    # hipocrafy-edge" que dispara la instalación mataría el proceso que tiene que
+    # seguir corriendo para chequear salud y hacer rollback — se detectó probando en
+    # un equipo real: la instalación rota nunca revertía sola.
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+    run_app_ota_check()

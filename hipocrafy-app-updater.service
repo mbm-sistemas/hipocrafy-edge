@@ -1,0 +1,12 @@
+[Unit]
+Description=Hipocrafy Edge App OTA Updater (chequeo de codigo, no del modelo)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/pmoraga/hipocrafy-edge
+ExecStart=/home/pmoraga/hipocrafy-edge/venv/bin/python3 /home/pmoraga/hipocrafy-edge/app_updater.py
+User=pmoraga
+StandardOutput=journal
+StandardError=journal
