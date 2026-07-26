@@ -37,6 +37,12 @@ HEALTH_URL = "http://localhost:8080/health"
 HEALTH_RETRIES = 10
 HEALTH_WAIT_SECONDS = 3
 
+# El nombre real del servicio (ver hipocrafy-edge.service en la raíz del repo) es
+# uno solo: "hipocrafy-edge". No asumir los nombres del workflow de CI viejo
+# (hipocrafy-api/hipocrafy-dicom), que están desactualizados. Configurable por si
+# algún equipo lo corre distinto.
+APP_SERVICES = [s.strip() for s in os.getenv("APP_SYSTEMD_SERVICES", "hipocrafy-edge.service").split(",") if s.strip()]
+
 # Apagado por defecto a propósito: hasta que se valide en el equipo real que
 # la instalación automática funciona (permisos de sudo, servicios correctos),
 # este loop solo detecta y reporta disponibilidad, nunca instala solo.
@@ -147,15 +153,15 @@ def _extract_over_app_dir(tarball: Path):
 
 
 def _restart_services() -> bool:
-    """Requiere sudoers configurado sin password para estos dos comandos específicos."""
+    """Requiere sudoers configurado sin password para 'systemctl restart' de APP_SERVICES."""
     try:
         subprocess.run(
-            ["sudo", "systemctl", "restart", "hipocrafy-api.service", "hipocrafy-dicom.service"],
+            ["sudo", "systemctl", "restart", *APP_SERVICES],
             check=True, timeout=30,
         )
         return True
     except Exception as exc:
-        logger.error(f"No se pudieron reiniciar los servicios: {exc}")
+        logger.error(f"No se pudieron reiniciar los servicios {APP_SERVICES}: {exc}")
         return False
 
 
