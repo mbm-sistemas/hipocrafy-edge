@@ -5,6 +5,7 @@ import sqlite3
 import shutil
 import asyncio
 import base64
+import tempfile
 import httpx
 from datetime import datetime
 from pathlib import Path
@@ -32,7 +33,7 @@ from api.routes_enrollment import router as enrollment_router
 from api.routes_clip import router as clip_router
 from enrollment.face_match import init_biometric_db
 from prompts.specialties import get_specialty_names
-from vision_service import analyze_study, synthesize_report
+from vision_service import analyze_study, synthesize_report, extract_visual_findings
 from services.sync_service import sync_service
 from services.rag_service import rag_service
 from model_updater import run_ota_check, predict_from_organ_analysis
@@ -767,6 +768,14 @@ async def _ota_check_loop():
             logger.error(f"[OTA] Error en chequeo periódico: {e}")
 
 
+def _warmup_clip():
+    try:
+        from clip_labeler import warmup
+        warmup()
+    except Exception as e:
+        logger.warning(f"No se pudo precargar BioMedCLIP ({e}). Se cargará bajo demanda en el primer estudio.")
+
+
 @app.on_event("startup")
 async def startup_event():
     init_biometric_db()
@@ -776,6 +785,9 @@ async def startup_event():
     asyncio.create_task(_ota_check_loop())
     # OTA model check inmediato al arrancar — no bloqueante
     asyncio.get_event_loop().run_in_executor(None, run_ota_check)
+    # Precarga BioMedCLIP en memoria — no bloqueante, evita que el primer estudio
+    # del día pague el costo de carga del modelo (varios segundos en Jetson)
+    asyncio.get_event_loop().run_in_executor(None, _warmup_clip)
     # El OTA de código de la app (app_updater.py) corre aparte, como proceso
     # standalone via systemd timer — no acá. Si "systemctl restart" se dispara
     # desde dentro de este mismo proceso, se mata a si mismo antes de poder
@@ -1151,58 +1163,22 @@ async def health_check():
 @app.post("/extract")
 async def extract_findings(request: Request):
     """
-    Extracts visual findings from base64 medical image.
+    Extracts visual findings from base64 medical image using BioMedCLIP local (clip_labeler).
     Used by backend as the local vision extractor.
     """
     try:
         body = await request.json()
         image_base64 = body.get("image_base64", "")
-        findings = {
-            "finding": "Estructuras óseas y tejidos blandos de morfología conservada. Sin evidencia de fracturas agudas, lesiones líticas o blásticas.",
-            "confidence": 0.94,
-            "anomalies": [],
-            "body_region": "tórax",
-            "modality": "radiografía"
-        }
+        specialty = body.get("specialty", "general")
 
-        # Intentar ejecutar modelo real ONNX BiomedCLIP
+        image_data = base64.b64decode(image_base64)
+        tmp_path = os.path.join(tempfile.gettempdir(), f"extract_{secrets.token_hex(8)}.png")
+        with open(tmp_path, "wb") as f:
+            f.write(image_data)
         try:
-            import onnxruntime as ort
-            import numpy as np
-            from PIL import Image
-            import io
-
-            model_path = os.path.join(BASE_DIR, "models", "biomedclip.onnx")
-            if os.path.exists(model_path):
-                # Usar GPU (TensorRT/CUDA) si está disponible
-                providers = ['TensorrtExecutionProvider', 'CUDAExecutionProvider', 'CPUExecutionProvider']
-                session = ort.InferenceSession(model_path, providers=providers)
-                
-                # Decodificar imagen
-                image_data = base64.b64decode(image_base64)
-                image = Image.open(io.BytesIO(image_data)).convert('RGB')
-                
-                # Preprocesar imagen (224x224 para CLIP)
-                img_resized = image.resize((224, 224))
-                img_array = np.array(img_resized).astype(np.float32) / 255.0
-                img_array -= np.array([0.48145466, 0.4578275, 0.40821073])
-                img_array /= np.array([0.26862954, 0.26130258, 0.27577711])
-                img_array = np.transpose(img_array, (2, 0, 1))
-                img_input = np.expand_dims(img_array, axis=0)
-
-                # Ejecutar inferencia en la GPU
-                input_name = session.get_inputs()[0].name
-                session.run(None, {input_name: img_input})
-                findings["finding"] += " [Analizado vía GPU (BiomedCLIP Local)]"
-                findings["confidence"] = 0.95
-            else:
-                logger.warning("Modelo BiomedCLIP no encontrado en main.py. Usando mock.")
-        except ImportError:
-            logger.warning("onnxruntime o dependencias no instaladas en entorno principal. Usando mock.")
-        except Exception as inference_err:
-            logger.error(f"Error en inferencia local ONNX: {inference_err}")
-
-        return findings
+            return extract_visual_findings(tmp_path, specialty)
+        finally:
+            os.remove(tmp_path)
     except Exception as e:
         logger.error(f"Error in vision extraction: {e}")
         raise HTTPException(status_code=500, detail=str(e))

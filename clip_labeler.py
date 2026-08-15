@@ -256,3 +256,42 @@ def label_by_specialty(
         candidates.extend(extra_candidates)
 
     return label_image(image_path, candidates, top_k=top_k)
+
+
+# ── Adaptador para el pipeline de análisis clínico ────────────────────────────
+
+_SPECIALTY_META: dict[str, tuple[str, str]] = {
+    "ecografia_abdominal": ("abdomen", "ecografía"),
+    "radiografia_torax": ("tórax", "radiografía"),
+    "ecografia_obstetrica": ("pelvis/obstétrico", "ecografía"),
+    "electrocardiograma": ("cardíaco", "electrocardiograma"),
+    "general": ("general", "imagen"),
+}
+
+
+def classify_visual_findings(image_path: str | Path, specialty: str = "general", top_k: int = 5) -> dict:
+    """
+    Adapta label_by_specialty() al formato de "hallazgos visuales" que consume
+    el pipeline de análisis clínico (vision_service.py: extract_visual_findings).
+    """
+    results = label_by_specialty(image_path, specialty, top_k=top_k)
+    if not results:
+        raise RuntimeError("BioMedCLIP no devolvió resultados de clasificación")
+
+    top = results[0]
+    anomalies = [r["label"] for r in results if "normal" not in r["label"].lower()][:3]
+    body_region, modality = _SPECIALTY_META.get(specialty.lower(), _SPECIALTY_META["general"])
+
+    return {
+        "finding": f"Hallazgo predominante (BioMedCLIP local): {top['label']}.",
+        # score es similitud coseno de CLIP, no una probabilidad calibrada — se usa como proxy de confianza
+        "confidence": top["score"],
+        "anomalies": anomalies,
+        "body_region": body_region,
+        "modality": modality,
+    }
+
+
+def warmup() -> None:
+    """Precarga el modelo BioMedCLIP en memoria (llamar al arrancar el servicio)."""
+    _load_model()

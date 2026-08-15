@@ -183,22 +183,14 @@ def analyze_study(
     }
 
 
-def extract_visual_findings(image_path):
-    """Llama al microservicio vision_extractor local o retorna un mock si falla o no está activo."""
+def extract_visual_findings(image_path, specialty="general"):
+    """Clasifica la imagen con BioMedCLIP local (clip_labeler) o retorna un mock si no está disponible."""
     try:
-        with open(image_path, "rb") as image_file:
-            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
-        
-        # Intentar llamar al extractor local en puerto 5001
-        resp = requests.post("http://localhost:5001/extract", json={
-            "image_base64": encoded_string,
-            "mime_type": "image/png"
-        }, timeout=5.0)
-        if resp.status_code == 200:
-            return resp.json()
+        from clip_labeler import classify_visual_findings
+        return classify_visual_findings(image_path, specialty)
     except Exception as e:
-        logger.warning(f"No se pudo contactar con vision_extractor local ({e}). Usando mock.")
-    
+        logger.warning(f"BioMedCLIP no disponible ({e}). Usando mock de hallazgos visuales.")
+
     # Fallback / Mock
     return {
         "finding": "Estructuras óseas y tejidos blandos de morfología conservada. Sin evidencia de fracturas agudas, lesiones líticas o blásticas.",
@@ -299,8 +291,8 @@ def analyze_with_deepseek(
     urls_to_try = ([local_url, cloud_url] if local_first and local_url else [cloud_url])
     
     # 1. Extraer hallazgos de visión locales
-    visual_findings = extract_visual_findings(image_path)
-    
+    visual_findings = extract_visual_findings(image_path, specialty)
+
     # 2. Generar el prompt clínico
     base_prompt = build_specialty_prompt(
         specialty=specialty,
@@ -309,15 +301,15 @@ def analyze_with_deepseek(
         patient_sex=patient_sex,
         dicom_metadata=dicom_metadata
     )
-    
+
     prompt = f"""{base_prompt}
-    
+
     INFORMACIÓN ADICIONAL DEL EXTRACTOR DE VISIÓN LOCAL:
     - Hallazgo de visión inicial: {visual_findings.get('finding')}
     - Confianza del extractor de visión: {visual_findings.get('confidence')}
     - Región corporal: {visual_findings.get('body_region')}
     - Modalidad detectada: {visual_findings.get('modality')}
-    
+
     Por favor interpreta estos hallazgos según tu especialidad y devuelve estrictamente el JSON esperado.
     """
 
@@ -369,8 +361,8 @@ def analyze_with_ollama(
     url = f"{ollama_url}/v1/chat/completions"
     
     # 1. Extraer hallazgos locales
-    visual_findings = extract_visual_findings(image_path)
-    
+    visual_findings = extract_visual_findings(image_path, specialty)
+
     # 2. Construir el prompt clínico
     base_prompt = build_specialty_prompt(
         specialty=specialty,
