@@ -17,36 +17,28 @@ import shutil
 import subprocess
 import tarfile
 import tempfile
-import time
-from pathlib import Path
-
-import requests
-from dotenv import load_dotenv
-
-load_dotenv()
-
-logger = logging.getLogger("HipocrafyAppOTA")
-
-CLOUD_URL = os.getenv("HIPOCRAFY_CLOUD_URL", "").rstrip("/")
-GATEWAY_TOKEN = os.getenv("GATEWAY_API_TOKEN", "")
-APP_DIR = Path(os.getenv("APP_DIR", "/home/pmoraga/hipocrafy-edge"))
-BACKUP_DIR = Path(os.getenv("APP_BACKUP_DIR", "/home/pmoraga/hipocrafy-edge-backups"))
-VERSION_FILE = APP_DIR / "VERSION"
-TIMEOUT = 30
-HEALTH_URL = "http://localhost:8080/health"
-HEALTH_RETRIES = 10
-HEALTH_WAIT_SECONDS = 3
-
-# El nombre real del servicio (ver hipocrafy-edge.service en la raíz del repo) es
-# uno solo: "hipocrafy-edge". No asumir los nombres del workflow de CI viejo
-# (hipocrafy-api/hipocrafy-dicom), que están desactualizados. Configurable por si
-# algún equipo lo corre distinto.
-APP_SERVICES = [s.strip() for s in os.getenv("APP_SYSTEMD_SERVICES", "hipocrafy-edge.service").split(",") if s.strip()]
+from datetime import datetime
 
 # Apagado por defecto a propósito: hasta que se valide en el equipo real que
 # la instalación automática funciona (permisos de sudo, servicios correctos),
 # este loop solo detecta y reporta disponibilidad, nunca instala solo.
 AUTO_INSTALL_APP_UPDATES = os.getenv("AUTO_INSTALL_APP_UPDATES", "false").lower() == "true"
+
+# Si está en true (predeterminado), las actualizaciones automáticas solo se aplican
+# durante la ventana de mantenimiento: 22:00 a 06:00 hs (Lunes a Sábado) y Domingos todo el día.
+ENFORCE_MAINTENANCE_WINDOW = os.getenv("ENFORCE_MAINTENANCE_WINDOW", "true").lower() == "true"
+
+
+def is_in_maintenance_window() -> bool:
+    """
+    Verifica si el momento actual está dentro de la ventana de mantenimiento autorizada:
+      - Domingos: Todo el día (weekday == 6)
+      - Lunes a Sábado: De 22:00 hs a 06:00 hs del día siguiente (hour >= 22 o hour < 6)
+    """
+    now = datetime.now()
+    if now.weekday() == 6:  # Domingo (Lunes es 0, Domingo es 6)
+        return True
+    return now.hour >= 22 or now.hour < 6
 
 # Rutas que nunca se deben pisar al instalar una release nueva (datos locales,
 # entorno, y el propio venv que no viaja en el tarball de la release).
@@ -218,6 +210,14 @@ def check_and_update() -> bool:
             "AUTO_INSTALL_APP_UPDATES=false — solo se detecta y reporta, no se instala sola. "
             "Activar manualmente en .env una vez validado en el equipo."
         )
+        return True
+
+    if ENFORCE_MAINTENANCE_WINDOW and not is_in_maintenance_window():
+        logger.info(
+            f"Nueva release disponible (v{remote_version}), pero fuera de la ventana de mantenimiento "
+            "(22:00 a 06:00 hs y domingos todo el día). Se pospone la instalación automática."
+        )
+        _report_status(remote_version, "idle", error=None)
         return True
 
     _report_status(remote_version, "downloading")

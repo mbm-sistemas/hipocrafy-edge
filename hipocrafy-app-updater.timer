@@ -3,7 +3,7 @@ Description=Chequeo periodico de releases de la app Hipocrafy Edge
 
 [Timer]
 OnBootSec=2min
-OnUnitActiveSec=6h
+OnUnitActiveSec=1h
 Persistent=true
 
 [Install]

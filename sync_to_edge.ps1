@@ -5,14 +5,14 @@
 # cambios locales al Jetson Orin Nano y reiniciarlo.
 
 $User = "pmoraga"
-$HostName = "edge02-cegin"
+$HostName = "edge01-cegin"
 $RemoteDir = "/home/pmoraga/hipocrafy-edge"
 
 Write-Host "[*] Iniciando sincronizacion con Hipocrafy Edge ($HostName)..." -ForegroundColor Cyan
 
 # 1. Subir archivos modificados
 Write-Host "[*] Subiendo archivos..." -ForegroundColor Yellow
-scp -r main.py templates prompts data services core api enrollment vision_extractor.py vision_service.py gateway_production.py simulate_capture.py update_edge.sh setup_jetson.sh hipocrafy-edge.service requirements.txt "${User}@${HostName}:${RemoteDir}/"
+scp -o StrictHostKeyChecking=no -r main.py app_updater.py hipocrafy-app-updater.timer templates prompts data services core api enrollment vision_service.py gateway_production.py simulate_capture.py update_edge.sh setup_jetson.sh hipocrafy-edge.service requirements.txt "${User}@${HostName}:${RemoteDir}/"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "[OK] Archivos subidos correctamente." -ForegroundColor Green
@@ -23,7 +23,7 @@ if ($LASTEXITCODE -eq 0) {
 
 # 2. Ejecutar script de actualización en el Jetson
 Write-Host "[*] Ejecutando script de actualizacion en el Jetson..." -ForegroundColor Yellow
-ssh -t "${User}@${HostName}" "chmod +x ${RemoteDir}/update_edge.sh; export SUDO_PASS='Martiluc1317'; ${RemoteDir}/update_edge.sh"
+ssh -o StrictHostKeyChecking=no -t "${User}@${HostName}" "sed -i 's/\r$//' ${RemoteDir}/update_edge.sh; chmod +x ${RemoteDir}/update_edge.sh; export SUDO_PASS='Martiluc1317'; ${RemoteDir}/update_edge.sh"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "[OK] Sincronizacion y actualizacion finalizada con exito." -ForegroundColor Green
