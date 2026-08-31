@@ -5,7 +5,8 @@ Emite datos de señales cerebrales (Normal, Crisis Ictal Epileptiforme, Encefalo
 
 import sys
 import os
-import httpx
+import json
+import urllib.request
 import argparse
 
 def simulate_eeg(patient_dni: str, scenario: str, url: str):
@@ -24,50 +25,47 @@ def simulate_eeg(patient_dni: str, scenario: str, url: str):
             "frequency_bands": {
                 "delta_0_4hz": 12.5,
                 "theta_4_8hz": 18.0,
-                "alpha_8_13hz": 58.0,
-                "beta_13_30hz": 11.5
+                "alpha_8_12hz": 58.5,
+                "beta_12_30hz": 11.0
             },
-            "seizure_detected": False,
-            "spike_wave_discharges": False
+            "spikes_detected": 0,
+            "is_seizure": False
         }
     elif scenario == "seizure":
         payload = {
             "patient_dni": patient_dni,
             "channels": ["F3-C3", "F4-C4", "C3-P3", "C4-P4", "P3-O1", "P4-O2"],
             "frequency_bands": {
-                "delta_0_4hz": 30.0,
-                "theta_4_8hz": 40.0,
-                "alpha_8_13hz": 15.0,
-                "beta_13_30hz": 15.0
+                "delta_0_4hz": 42.0,
+                "theta_4_8hz": 35.0,
+                "alpha_8_12hz": 10.0,
+                "beta_12_30hz": 13.0
             },
-            "seizure_detected": True,
-            "spike_wave_discharges": True
+            "spikes_detected": 14,
+            "is_seizure": True
         }
-    elif scenario == "encefalopatia":
+    else:
         payload = {
             "patient_dni": patient_dni,
             "channels": ["F3-C3", "F4-C4", "C3-P3", "C4-P4", "P3-O1", "P4-O2"],
             "frequency_bands": {
                 "delta_0_4hz": 65.0,
-                "theta_4_8hz": 22.0,
-                "alpha_8_13hz": 8.0,
-                "beta_13_30hz": 5.0
+                "theta_4_8hz": 25.0,
+                "alpha_8_12hz": 5.0,
+                "beta_12_30hz": 5.0
             },
-            "seizure_detected": False,
-            "spike_wave_discharges": False
-        }
-    else:
-        payload = {
-            "patient_dni": patient_dni,
-            "channels": ["F3-C3", "F4-C4"],
-            "seizure_detected": False
+            "spikes_detected": 2,
+            "is_seizure": False
         }
 
     try:
-        response = httpx.post(url, json=payload, timeout=10.0)
-        print(f"Status Code: {response.status_code}")
-        print("Respuesta del Server:")
-        print(response.json())
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'}, method='POST')
+        with urllib.request.urlopen(req, timeout=10.0) as response:
+            res_body = json.loads(response.read().decode('utf-8'))
+            print(f"Status Code: {response.status}")
+            print("Respuesta del Server:")
+            print(res_body)
     except Exception as e:
         print(f"❌ Error enviando simulacion EEG: {e}")
 

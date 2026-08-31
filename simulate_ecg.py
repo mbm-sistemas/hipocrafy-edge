@@ -5,7 +5,8 @@ Emite señales 1D de trazado electrocardiográfico (Ritmo Sinusal, AFib, Elevaci
 
 import sys
 import os
-import httpx
+import json
+import urllib.request
 import argparse
 
 def simulate_ecg(patient_dni: str, scenario: str, url: str):
@@ -41,7 +42,7 @@ def simulate_ecg(patient_dni: str, scenario: str, url: str):
             "st_elevation_leads": ["V1", "V2", "V3", "V4"],
             "is_afib": False
         }
-    elif scenario == "afib":
+    else:
         payload = {
             "patient_dni": patient_dni,
             "sample_rate_hz": 500,
@@ -53,19 +54,15 @@ def simulate_ecg(patient_dni: str, scenario: str, url: str):
             "st_elevation_leads": [],
             "is_afib": True
         }
-    else:
-        payload = {
-            "patient_dni": patient_dni,
-            "sample_rate_hz": 500,
-            "heart_rate": 75,
-            "is_afib": False
-        }
 
     try:
-        response = httpx.post(url, json=payload, timeout=10.0)
-        print(f"Status Code: {response.status_code}")
-        print("Respuesta del Server:")
-        print(response.json())
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'}, method='POST')
+        with urllib.request.urlopen(req, timeout=10.0) as response:
+            res_body = json.loads(response.read().decode('utf-8'))
+            print(f"Status Code: {response.status}")
+            print("Respuesta del Server:")
+            print(res_body)
     except Exception as e:
         print(f"❌ Error enviando simulacion ECG: {e}")
 

@@ -5,7 +5,8 @@ Permite simular la captura de signos vitales (normotenso, shock, crisis) y antro
 
 import sys
 import os
-import httpx
+import json
+import urllib.request
 import argparse
 
 def simulate_vitals(patient_dni: str, scenario: str, url: str):
@@ -33,13 +34,13 @@ def simulate_vitals(patient_dni: str, scenario: str, url: str):
         payload = {
             "patient_dni": patient_dni,
             "heart_rate": 135,
-            "sbp": 82,
+            "sbp": 85,
             "dbp": 50,
-            "spo2": 88,
-            "temp_c": 39.2,
+            "spo2": 89,
+            "temp_c": 38.8,
             "resp_rate": 28,
             "height_cm": 170,
-            "weight_kg": 68
+            "weight_kg": 65
         }
     elif scenario == "obesidad_metabolico":
         payload = {
@@ -56,7 +57,7 @@ def simulate_vitals(patient_dni: str, scenario: str, url: str):
     else:
         payload = {
             "patient_dni": patient_dni,
-            "heart_rate": 90,
+            "heart_rate": 92,
             "sbp": 130,
             "dbp": 85,
             "spo2": 96,
@@ -67,10 +68,13 @@ def simulate_vitals(patient_dni: str, scenario: str, url: str):
         }
 
     try:
-        response = httpx.post(url, json=payload, timeout=10.0)
-        print(f"Status Code: {response.status_code}")
-        print("Respuesta del Server:")
-        print(response.json())
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'}, method='POST')
+        with urllib.request.urlopen(req, timeout=10.0) as response:
+            res_body = json.loads(response.read().decode('utf-8'))
+            print(f"Status Code: {response.status}")
+            print("Respuesta del Server:")
+            print(res_body)
     except Exception as e:
         print(f"❌ Error enviando simulacion: {e}")
 
