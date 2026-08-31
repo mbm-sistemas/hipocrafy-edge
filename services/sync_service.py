@@ -95,4 +95,15 @@ class SyncService:
             logger.error(f"Exception pushing data to cloud: {e}")
             return False
 
+    async def sync_vitals_to_cloud(self, vitals_data: dict) -> bool:
+        """Sincroniza datos de signos vitales + antropometría hacia el backend."""
+        logger.info(f"Sincronizando vitales a nube para DNI {vitals_data.get('patient_dni')}")
+        return await self.push_data("edge-gateway/vitals", vitals_data)
+
+    async def sync_signal_to_cloud(self, signal_type: str, signal_data: dict) -> bool:
+        """Sincroniza trazado de electrofisiología (ECG / EEG) hacia el backend."""
+        logger.info(f"Sincronizando señal {signal_type} a nube para DNI {signal_data.get('patient_dni')}")
+        return await self.push_data(f"edge-gateway/signal/{signal_type.lower()}", signal_data)
+
 sync_service = SyncService()
+
