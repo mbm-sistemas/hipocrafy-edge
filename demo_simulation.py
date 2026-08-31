@@ -27,14 +27,10 @@ GATEWAY_URL = "http://localhost:8080"
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "edge_data.db")
 
 # ═══════════════════════════════════════════════════════════
-#  PACIENTES FICTICIOS (simulan datos DICOM reales)
+#  PACIENTES REALES Y SEGUIMIENTO CLINICO (simulan datos DICOM)
 # ═══════════════════════════════════════════════════════════
-FAKE_PATIENTS = [
-    {"dni": "30456789", "name": "María García",    "modality": "US",  "body_part": "Abdomen"},
-    {"dni": "28123456", "name": "Carlos Rodríguez","modality": "CT",  "body_part": "Tórax"},
-    {"dni": "35789012", "name": "Ana Martínez",    "modality": "MR",  "body_part": "Columna Lumbar"},
-    {"dni": "40234567", "name": "Juan López",      "modality": "US",  "body_part": "Tiroides"},
-    {"dni": "33567890", "name": "Lucía Fernández", "modality": "CR",  "body_part": "Rodilla Derecha"},
+SIMULATED_PATIENTS = [
+    {"dni": "17580837", "name": "Pablo Moraga",    "modality": "US",  "body_part": "Abdomen / Carótida"},
 ]
 
 # Hallazgos IA posibles (simulados)
@@ -127,8 +123,8 @@ def run_full_simulation():
     print()
 
     uids = []
-    for i, (patient, finding) in enumerate(zip(FAKE_PATIENTS, FINDINGS)):
-        print(f"  📋 Estudio {i+1}/{len(FAKE_PATIENTS)}:")
+    for i, (patient, finding) in enumerate(zip(SIMULATED_PATIENTS, FINDINGS)):
+        print(f"  📋 Estudio {i+1}/{len(SIMULATED_PATIENTS)}:")
         uid = simulate_dicom_send(patient, finding)
         uids.append(uid)
 
