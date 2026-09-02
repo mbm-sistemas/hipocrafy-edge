@@ -24,8 +24,7 @@ run_sudo systemctl stop hipocrafy-edge || true
 echo "=== 2. Actualizando dependencias de Python ==="
 if [ -d "venv" ]; then
     source venv/bin/activate
-    pip install --upgrade pip
-    pip install -r requirements.txt || echo "No requirements.txt or no changes"
+    pip install --no-deps -r requirements.txt || echo "Instalacion de dependencias finalizada."
 else
     echo "Advertencia: No se encontró el entorno virtual venv."
 fi
