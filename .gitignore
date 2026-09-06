@@ -13,3 +13,5 @@ edge_data.db
 jetson_env.txt
 *_env.txt
 *.log
+# Certificados TLS locales (mkcert) - nunca la clave privada al repo
+certs/
