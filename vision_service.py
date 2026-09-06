@@ -189,16 +189,32 @@ def extract_visual_findings(image_path, specialty="general"):
         from clip_labeler import classify_visual_findings
         return classify_visual_findings(image_path, specialty)
     except Exception as e:
-        logger.warning(f"BioMedCLIP no disponible ({e}). Usando mock de hallazgos visuales.")
+        logger.warning(f"BioMedCLIP no disponible ({e}). Sin extractor de visión local para este estudio.")
 
-    # Fallback / Mock
+    # Antes este fallback devolvía un hallazgo "normal" inventado con
+    # confidence=0.94 - indistinguible de una lectura real de BioMedCLIP, y se
+    # inyectaba tal cual en el prompt de DeepSeek/Ollama como si fuera un
+    # análisis visual genuino. Ahora es explícito que no hubo lectura real.
     return {
-        "finding": "Estructuras óseas y tejidos blandos de morfología conservada. Sin evidencia de fracturas agudas, lesiones líticas o blásticas.",
-        "confidence": 0.94,
+        "finding": None,
+        "confidence": 0.0,
         "anomalies": [],
-        "body_region": "general",
-        "modality": "imagen"
+        "body_region": None,
+        "modality": None,
+        "unavailable": True,
     }
+
+
+def _format_visual_findings_block(visual_findings: dict) -> str:
+    """Arma el bloque de prompt con los hallazgos del extractor visual local,
+    o deja explícito que no hubo lectura real en vez de imprimir campos None."""
+    if not visual_findings or visual_findings.get("unavailable"):
+        return "INFORMACIÓN ADICIONAL DEL EXTRACTOR DE VISIÓN LOCAL: no disponible para este estudio (analizar solo con la imagen adjunta)."
+    return f"""INFORMACIÓN ADICIONAL DEL EXTRACTOR DE VISIÓN LOCAL:
+    - Hallazgo de visión inicial: {visual_findings.get('finding')}
+    - Confianza del extractor de visión: {visual_findings.get('confidence')}
+    - Región corporal: {visual_findings.get('body_region')}
+    - Modalidad detectada: {visual_findings.get('modality')}"""
 
 
 def analyze_with_gemini(
@@ -304,11 +320,7 @@ def analyze_with_deepseek(
 
     prompt = f"""{base_prompt}
 
-    INFORMACIÓN ADICIONAL DEL EXTRACTOR DE VISIÓN LOCAL:
-    - Hallazgo de visión inicial: {visual_findings.get('finding')}
-    - Confianza del extractor de visión: {visual_findings.get('confidence')}
-    - Región corporal: {visual_findings.get('body_region')}
-    - Modalidad detectada: {visual_findings.get('modality')}
+    {_format_visual_findings_block(visual_findings)}
 
     Por favor interpreta estos hallazgos según tu especialidad y devuelve estrictamente el JSON esperado.
     """
@@ -373,13 +385,9 @@ def analyze_with_ollama(
     )
     
     prompt = f"""{base_prompt}
-    
-    INFORMACIÓN ADICIONAL DEL EXTRACTOR DE VISIÓN LOCAL:
-    - Hallazgo de visión inicial: {visual_findings.get('finding')}
-    - Confianza del extractor de visión: {visual_findings.get('confidence')}
-    - Región corporal: {visual_findings.get('body_region')}
-    - Modalidad detectada: {visual_findings.get('modality')}
-    
+
+    {_format_visual_findings_block(visual_findings)}
+
     Por favor interpreta estos hallazgos según tu especialidad y devuelve estrictamente el JSON esperado.
     """
 

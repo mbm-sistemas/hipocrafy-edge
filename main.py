@@ -155,6 +155,9 @@ templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 # Configuración Cloud
 CLOUD_URL = os.getenv("HIPOCRAFY_CLOUD_URL", "https://qas.hipocrafy-api.mbmsistemas.com.ar/api/edge-gateway")
 API_TOKEN = os.getenv("GATEWAY_API_TOKEN")
+# Precio por inferencia de IA reportado en cada billing-event - antes era un
+# número mágico (5.00) fijo en el código, sin poder ajustarse por clínica/plan.
+AI_INFERENCE_PRICE = float(os.getenv("AI_INFERENCE_PRICE", "5.00"))
 
 # ── Auth para endpoints de configuración ────────────────────────────────────
 _http_basic = HTTPBasic(auto_error=True)
@@ -296,16 +299,25 @@ async def process_and_sync(study_id: str):
             study_resp = await client.get(f"{orthanc_url}/studies/{study_id}", auth=auth, timeout=30.0)
             
             if study_resp.status_code != 200:
-                logger.warning(f"No se pudo obtener el estudio {study_id} de Orthanc (HTTP {study_resp.status_code})")
-                # Modo degradado: inferencia simulada
-                mock_dni = "00000000"
-                mock_modality = "UNKNOWN"
-            else:
-                study_data = study_resp.json()
-                main_tags = study_data.get("MainDicomTags", {})
-                patient_tags = study_data.get("PatientMainDicomTags", {})
-                mock_dni = patient_tags.get("PatientID", "00000000")
-                mock_modality = main_tags.get("ModalitiesInStudy", "UNKNOWN")
+                # Antes esto seguía igual con una identidad placeholder (DNI "00000000")
+                # corriendo todo el análisis de IA, guardándolo y subiéndolo a la nube
+                # (con evento de facturación incluido) bajo esa identidad falsa - riesgo
+                # de datos clínicos huérfanos o mal atribuidos. Si Orthanc no responde
+                # con los metadatos reales del estudio, se aborta el procesamiento acá.
+                logger.error(f"No se pudo obtener el estudio {study_id} de Orthanc (HTTP {study_resp.status_code}). Se aborta el procesamiento.")
+                await report_ai_event(
+                    event_type="orthanc_unreachable",
+                    severity="critical",
+                    message=f"Orthanc devolvió HTTP {study_resp.status_code} para el estudio {study_id}",
+                    study_uid=study_id,
+                )
+                return
+
+            study_data = study_resp.json()
+            main_tags = study_data.get("MainDicomTags", {})
+            patient_tags = study_data.get("PatientMainDicomTags", {})
+            mock_dni = patient_tags.get("PatientID", "00000000")
+            mock_modality = main_tags.get("ModalitiesInStudy", "UNKNOWN")
 
         # 2. Descargar la imagen central del estudio y analizar con vision_service
         try:
@@ -395,7 +407,7 @@ async def process_and_sync(study_id: str):
             try:
                 await client.post(
                     f"{CLOUD_URL}/billing-events",
-                    json={"service_type": "ai_inference", "amount": 5.00, "metadata": findings},
+                    json={"service_type": "ai_inference", "amount": AI_INFERENCE_PRICE, "metadata": findings},
                     headers=headers,
                     timeout=15.0
                 )
@@ -1227,69 +1239,21 @@ async def local_deepseek_proxy(request: Request):
                     logger.info("Successfully fetched response from local Ollama")
                     return resp.json()
                 else:
-                    logger.warning(f"Ollama returned status {resp.status_code}, falling back to mock")
+                    logger.error(f"Ollama returned status {resp.status_code}")
+                    raise HTTPException(status_code=502, detail=f"Ollama respondio con status {resp.status_code}")
+        except HTTPException:
+            raise
         except Exception as ollama_err:
-            logger.warning(f"Failed to connect to local Ollama ({ollama_err}), falling back to mock")
-
-        # Fallback to simulated/mock clinical diagnostic response
-        # Parse prompt to extract details
-        study_type = "Ecografía Abdominal"
-        if "tórax" in user_prompt.lower() or "torax" in user_prompt.lower() or "rx" in user_prompt.lower():
-            study_type = "Radiografía de Tórax"
-        elif "mamografía" in user_prompt.lower() or "mamografia" in user_prompt.lower():
-            study_type = "Mamografía"
-        
-        specialty = "Radiología"
-        if "ginecología" in user_prompt.lower() or "obstetricia" in user_prompt.lower():
-            specialty = "Ginecología y Obstetricia"
-        
-        # Build mock findings
-        mock_findings = ["Imágenes compatibles con anatomía conservada.", "No se aprecian lesiones focales ni colecciones líquidas significativas."]
-        pathology_status = "green"
-        confidence = "high"
-        
-        # If the user prompt has "hallazgos" or "anomalías" we can extract them
-        if "torus" in user_prompt.lower():
-            mock_findings = ["Hallazgos compatibles con Torus Mandibularis", "Integridad de tablas corticales"]
-            pathology_status = "yellow"
-            study_type = "Odontología / Tomografía"
-            specialty = "Odontología"
-        
-        formatted_findings = "\n".join([f"- {f}" for f in mock_findings])
-        mock_report = f"""# INFORME DE DIAGNÓSTICO POR IMÁGENES (Local DeepSeek Mock)
-        
-**Estudio:** {study_type}
-**Especialidad:** {specialty}
-**Confianza:** {confidence.upper()}
-**Estado de Patología:** {pathology_status.upper()}
-
-## Hallazgos
-{formatted_findings}
-
-## Conclusión
-Estudio evaluado por motor local. Hallazgos dentro de los límites normales o estables para control posterior.
-"""
-        
-        mock_json_content = {
-            "study_type": study_type,
-            "specialty": specialty,
-            "findings": mock_findings,
-            "conclusion": f"Evaluación local compatible con {study_type}. Sin hallazgos críticos agudos.",
-            "confidence": confidence,
-            "pathology_status": pathology_status,
-            "report_markdown": mock_report
-        }
-        
-        return {
-            "choices": [
-                {
-                    "message": {
-                        "role": "assistant",
-                        "content": json.dumps(mock_json_content, ensure_ascii=False)
-                    }
-                }
-            ]
-        }
+            # Antes esto devolvia un diagnostico clinico completamente inventado
+            # (findings, confidence, pathology_status) en el mismo formato que uno
+            # real - indistinguible para el medico o para el caller. El caller
+            # (vision_service.py::analyze_study) ya tiene su propio fallback entre
+            # motores (Gemini/DeepSeek/Ollama) - un error aca es lo que le permite
+            # pasar al siguiente motor en vez de aceptar un resultado inventado.
+            logger.error(f"No se pudo conectar con Ollama local ({ollama_err})")
+            raise HTTPException(status_code=503, detail=f"Ollama local no disponible: {ollama_err}")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error in local DeepSeek proxy: {e}")
         raise HTTPException(status_code=500, detail=str(e))

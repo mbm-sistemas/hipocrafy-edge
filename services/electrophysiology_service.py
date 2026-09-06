@@ -17,13 +17,22 @@ def analyze_ecg_signal(signal_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     sample_rate = signal_data.get("sample_rate_hz", 500)
     leads = signal_data.get("leads", {})
-    
-    # Métricas calculadas o provistas
-    hr = signal_data.get("heart_rate") or 75
-    pr_ms = signal_data.get("pr_interval_ms") or 156
-    qrs_ms = signal_data.get("qrs_duration_ms") or 88
-    qtc_ms = signal_data.get("qtc_interval_ms") or 412
-    axis_deg = signal_data.get("axis_degrees") or 45
+
+    # Métricas medidas reales - antes, si faltaban, se sustituían silenciosamente
+    # por valores fijos "normales" (75/156/88/412/45) y se corría igual la lógica
+    # clínica sobre ellos, devolviendo un veredicto de ritmo normal como si viniera
+    # de la señal real. Si al dispositivo/cliente le faltó mandar la métrica, hay
+    # que fallar explícito en vez de inventar un trazado.
+    required = ["heart_rate", "pr_interval_ms", "qrs_duration_ms", "qtc_interval_ms", "axis_degrees"]
+    missing = [k for k in required if signal_data.get(k) is None]
+    if missing:
+        raise ValueError(f"Faltan métricas reales de ECG en el payload: {', '.join(missing)}")
+
+    hr = signal_data["heart_rate"]
+    pr_ms = signal_data["pr_interval_ms"]
+    qrs_ms = signal_data["qrs_duration_ms"]
+    qtc_ms = signal_data["qtc_interval_ms"]
+    axis_deg = signal_data["axis_degrees"]
 
     findings = []
     severity = "NORMAL"
@@ -97,14 +106,13 @@ def analyze_eeg_signal(signal_data: Dict[str, Any]) -> Dict[str, Any]:
     Retorna potencia de bandas frecuenciales y hallazgos epileptiformes o de encefalopatía.
     """
     channels = signal_data.get("channels", ["F3", "F4", "C3", "C4", "P3", "P4", "O1", "O2"])
-    
-    # Distribución espectral de frecuencias (%)
-    bands = signal_data.get("frequency_bands") or {
-        "delta_0_4hz": 15.0,
-        "theta_4_8hz": 20.0,
-        "alpha_8_13hz": 50.0,
-        "beta_13_30hz": 15.0
-    }
+
+    # Distribución espectral de frecuencias (%) - real, medida del trazado.
+    # Antes, si faltaba, se sustituía por una distribución fija "normal" y se
+    # evaluaba igual la lógica clínica sobre datos inventados.
+    bands = signal_data.get("frequency_bands")
+    if not bands:
+        raise ValueError("Falta frequency_bands (distribución espectral real) en el payload de EEG")
 
     findings = []
     severity = "NORMAL"

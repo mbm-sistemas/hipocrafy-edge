@@ -116,9 +116,13 @@ try:
                     "structures": ["Cuerpo mandibular", "Sínfisis", "Raíces dentales", "Edentulismo"],
                     "findings": ["Hallazgos compatibles con Torus Mandibularis", "Integridad de tablas corticales"],
                     "confidence": "HIGH",
-                    "analysis_tag": "STABLE_PREVIEW"
+                    "analysis_tag": "STABLE_PREVIEW",
+                    "is_demo": True,
                 }
-                full_report = synthesize_report(ai_data)
+                # El log de "DEMO_MODE ACTIVO" solo lo ve quien mira la consola del
+                # servidor - el médico solo ve el dashboard, así que el aviso tiene
+                # que estar en el propio reporte para no confundirse con un diagnóstico real.
+                full_report = "⚠️ **MODO DEMO — Este NO es un diagnóstico real, es un resultado de ejemplo fijo.**\n\n" + synthesize_report(ai_data)
             else:
                 # 1. Análisis de Visión Real
                 try:
