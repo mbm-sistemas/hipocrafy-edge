@@ -18,6 +18,25 @@ import subprocess
 import tarfile
 import tempfile
 from datetime import datetime
+from pathlib import Path
+import requests
+from dotenv import load_dotenv
+
+load_dotenv()
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("HipocrafyAppOTA")
+
+CLOUD_URL     = os.getenv("HIPOCRAFY_CLOUD_URL", "").rstrip("/")
+GATEWAY_TOKEN = os.getenv("GATEWAY_API_TOKEN", "")
+APP_DIR       = Path(os.getenv("APP_DIR", "/home/pmoraga/hipocrafy-edge"))
+VERSION_FILE  = APP_DIR / "VERSION"
+BACKUP_DIR    = APP_DIR / "backups"
+TIMEOUT       = 30
+APP_SERVICES  = ["hipocrafy-edge"]
+HEALTH_URL    = os.getenv("HEALTH_URL", "http://127.0.0.1:8080/health")
+HEALTH_RETRIES = 5
+HEALTH_WAIT_SECONDS = 3
 
 # Apagado por defecto a propósito: hasta que se valide en el equipo real que
 # la instalación automática funciona (permisos de sudo, servicios correctos),

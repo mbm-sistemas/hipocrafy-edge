@@ -1,13 +1,19 @@
+import os
+import sys
+
+# Asegurar resolución de dependencias desde el virtualenv local y la raíz de hipocrafy-edge
+_edge_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+_site_packages = os.path.join(_edge_root, "venv", "Lib", "site-packages")
+if os.path.exists(_site_packages) and _site_packages not in sys.path:
+    sys.path.insert(0, _site_packages)
+if _edge_root not in sys.path:
+    sys.path.insert(0, _edge_root)
+
 import unittest
 import numpy as np
 import pydicom
 from pydicom.dataset import Dataset, FileMetaDataset
 from pydicom.uid import ExplicitVRLittleEndian, generate_uid
-import sys
-import os
-
-# Asegurar import de dicom_anonymizer
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from dicom_anonymizer import anonymize_dicom_file, anonymize_pixel_data, _TAG_RULES
 
 class TestDicomAnonymizerHardening(unittest.TestCase):
