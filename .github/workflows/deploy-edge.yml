@@ -35,6 +35,15 @@ jobs:
             venv/bin/pip install -r requirements.txt --quiet
           fi
 
+      - name: Run Gateway Automated Health & Resilience Tests
+        run: |
+          cd /home/pmoraga/hipocrafy-edge
+          if [ -f venv/bin/python3 ]; then
+            venv/bin/python3 -m unittest tests/test_anonymizer_extended.py
+            venv/bin/python3 -m unittest tests/test_store_and_forward_resilience.py
+            venv/bin/python3 -m unittest tests/test_rollback_resilience.py
+          fi
+
       - name: Restart services
         run: |
           sudo systemctl restart hipocrafy-api.service
