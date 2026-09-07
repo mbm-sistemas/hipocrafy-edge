@@ -177,11 +177,10 @@ def anonymize_tags(ds: pydicom.Dataset, original_patient_id: Optional[str] = Non
                 ds[tag].value = replacement
 
     # Deterministic patient ID hash (preserves longitudinal pseudonymity)
-    pid_tag = pydicom.tag.Tag(0x0010, 0x0020)
     if original_patient_id:
-        ds[pid_tag].value = "HIPOCRAFY-" + hashlib.sha256(original_patient_id.encode()).hexdigest()[:12].upper()
-    elif pid_tag in ds:
-        ds[pid_tag].value = "HIPOCRAFY-UNKNOWN"
+        ds.PatientID = "HIPOCRAFY-" + hashlib.sha256(original_patient_id.encode()).hexdigest()[:12].upper()
+    else:
+        ds.PatientID = "HIPOCRAFY-UNKNOWN"
 
     # Regenerate UIDs (breaks cross-study linkage)
     for group, element in _UID_TAGS:
