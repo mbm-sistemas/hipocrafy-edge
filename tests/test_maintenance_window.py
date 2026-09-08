@@ -28,6 +28,8 @@ class TestMaintenanceWindowBehavior(unittest.TestCase):
         }
 
         with patch.object(app_updater, "_get_remote_latest", return_value=dummy_remote), \
+             patch.object(app_updater, "CLOUD_URL", "https://cloud.example.com"), \
+             patch.object(app_updater, "GATEWAY_TOKEN", "test-token-123"), \
              patch.object(app_updater, "AUTO_INSTALL_APP_UPDATES", True), \
              patch.object(app_updater, "ENFORCE_MAINTENANCE_WINDOW", True), \
              patch.object(app_updater, "is_in_maintenance_window", return_value=False), \
