@@ -782,6 +782,24 @@ async def _ota_check_loop():
             logger.error(f"[OTA] Error en chequeo periódico: {e}")
 
 
+HEARTBEAT_INTERVAL_SECONDS = 60
+
+async def _cloud_heartbeat_loop():
+    """
+    Envía un heartbeat periódico a la nube para mantener actualizado
+    last_ping_at y el estado 'online' del gateway en el panel de control.
+    """
+    while True:
+        try:
+            if CLOUD_URL and API_TOKEN:
+                headers = {"Authorization": f"Bearer {API_TOKEN}", "Accept": "application/json"}
+                async with httpx.AsyncClient(timeout=8.0) as client:
+                    await client.get(f"{CLOUD_URL}/config", headers=headers)
+        except Exception as e:
+            logger.debug(f"[HEARTBEAT] Error enviando ping a la nube: {e}")
+        await asyncio.sleep(HEARTBEAT_INTERVAL_SECONDS)
+
+
 def _warmup_clip():
     try:
         from clip_labeler import warmup
@@ -797,6 +815,7 @@ async def startup_event():
     asyncio.create_task(_cleanup_loop())
     asyncio.create_task(_retry_failed_syncs_loop())
     asyncio.create_task(_ota_check_loop())
+    asyncio.create_task(_cloud_heartbeat_loop())
     # OTA model check inmediato al arrancar — no bloqueante
     asyncio.get_event_loop().run_in_executor(None, run_ota_check)
     # Precarga BioMedCLIP en memoria — no bloqueante, evita que el primer estudio
