@@ -417,15 +417,16 @@ def analyze_with_ollama(
         return data
     except Exception as e:
         logger.error(f"Error in Ollama analysis: {e}")
+        finding_text = visual_findings.get("finding") or ""
         return {
             "specialty": specialty,
-            "area_anatomica": visual_findings.get("body_region", "general"),
+            "area_anatomica": visual_findings.get("body_region") or "general",
             "clinical_correlation": "Evaluado localmente en modo contingencia.",
             "organ_analysis": [
                 {
                     "organ": "Región principal",
-                    "status": "normal" if "normal" in visual_findings.get("finding", "").lower() else "alterado",
-                    "signs": [visual_findings.get("finding")],
+                    "status": "normal" if "normal" in finding_text.lower() else "alterado",
+                    "signs": [finding_text] if finding_text else ["Evaluación ecográfica inicial"],
                     "measurements": "N/A"
                 }
             ],
