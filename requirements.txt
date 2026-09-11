@@ -4,6 +4,12 @@ httpx>=0.24.0
 python-dotenv>=1.0.0
 jinja2>=3.1.0
 pydicom>=2.4.0
+# Decodifica pixel data DICOM comprimido (JPEG baseline/lossless, JPEG2000) —
+# sin esto, ds.pixel_array falla en series de ecografía comprimidas y el
+# cine-loop nunca se puede extraer (cine_extractor._encode_from_pixel_array).
+pylibjpeg>=2.0
+pylibjpeg-libjpeg>=2.1
+pylibjpeg-openjpeg>=2.1
 langchain>=0.1.0
 langchain-community>=0.0.10
 chromadb>=0.4.22

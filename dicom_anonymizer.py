@@ -219,11 +219,27 @@ def anonymize_dicom_dataset(
     if anonymize_pixels:
         try:
             pixels = ds.pixel_array
-            anon_pixels = anonymize_pixel_data(
-                pixels,
-                force_mask_top_pct=force_mask_top_pct,
-                force_mask_bottom_pct=force_mask_bottom_pct,
-            )
+            num_frames = int(getattr(ds, "NumberOfFrames", 1) or 1)
+            if num_frames > 1 and pixels.ndim >= 3:
+                # Cine-loop / serie multi-frame: pixels tiene shape (N,H,W) o
+                # (N,H,W,3). Anonimizar frame por frame — tratar el eje N
+                # como si fueran canales de color (el bug que tenía este
+                # anonimizador antes) produciría una máscara sin sentido o
+                # un crash en vez de enmascarar el burn-in real de cada frame.
+                anon_pixels = np.stack([
+                    anonymize_pixel_data(
+                        frame,
+                        force_mask_top_pct=force_mask_top_pct,
+                        force_mask_bottom_pct=force_mask_bottom_pct,
+                    )
+                    for frame in pixels
+                ])
+            else:
+                anon_pixels = anonymize_pixel_data(
+                    pixels,
+                    force_mask_top_pct=force_mask_top_pct,
+                    force_mask_bottom_pct=force_mask_bottom_pct,
+                )
             # Re-encode: for uncompressed transfer syntaxes only
             uncompressed = [
                 "1.2.840.10008.1.2",       # Implicit VR Little Endian
@@ -288,10 +304,17 @@ def anonymize_orthanc_study(
     orthanc_auth: tuple,
     output_dir: str,
     anonymize_pixels: bool = True,
+    delete_original: bool = True,
 ) -> list[dict]:
     """
     Download all DICOM instances of an Orthanc study, anonymize, and save to output_dir.
     Returns list of anonymization result dicts.
+
+    `delete_original` por defecto True mantiene el comportamiento histórico
+    (uso por CLI/tests, donde output_dir es descartable). El pipeline de
+    producción (main.py) NO debe pasar True acá si el original todavía no
+    fue confirmado como archivado en el backend central — perderlo antes de
+    tener un respaldo durable rompe la cadena de custodia del estudio.
     """
     import requests as req
 
@@ -311,7 +334,8 @@ def anonymize_orthanc_study(
             f.write(dicom_resp.content)
 
         result = anonymize_dicom_file(in_path, out_path, anonymize_pixels=anonymize_pixels)
-        os.remove(in_path)  # remove unencrypted original
+        if delete_original:
+            os.remove(in_path)
         results.append(result)
 
     logger.info(f"Anonymized {len(results)} instances for study {study_id}")

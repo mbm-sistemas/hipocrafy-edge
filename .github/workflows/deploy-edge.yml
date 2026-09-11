@@ -35,24 +35,56 @@ jobs:
             venv/bin/pip install -r requirements.txt --quiet
           fi
 
+      - name: Ensure ffmpeg is installed (extracción de cine-loop)
+        run: |
+          if ! command -v ffmpeg &> /dev/null; then
+            echo "ffmpeg no está instalado — instalando (necesario para extraer video de estudios multi-frame)..."
+            sudo apt-get update && sudo apt-get install -y ffmpeg
+          fi
+
       - name: Run Gateway Automated Health & Resilience Tests
         run: |
           cd /home/pmoraga/hipocrafy-edge
+          # NOTA: este archivo se llamaba "test_anonymizer_extended.py" acá,
+          # un nombre que nunca existió en el repo (el real es
+          # test_anonymizer_hardening.py). Con `set -e` implícito de GitHub
+          # Actions, ese typo hacía fallar este step en TODOS los deploys —
+          # y "Restart services" nunca corría, así que ningún push a
+          # development llegaba realmente al Jetson por este pipeline.
           if [ -f venv/bin/python3 ]; then
-            venv/bin/python3 -m unittest tests/test_anonymizer_extended.py
+            venv/bin/python3 -m unittest tests/test_anonymizer_hardening.py
             venv/bin/python3 -m unittest tests/test_store_and_forward_resilience.py
             venv/bin/python3 -m unittest tests/test_rollback_resilience.py
           fi
 
       - name: Restart services
         run: |
-          sudo systemctl restart hipocrafy-api.service
-          sudo systemctl restart hipocrafy-dicom.service
+          # El repo solo versiona hipocrafy-edge.service, pero este step
+          # históricamente reiniciaba hipocrafy-api.service/hipocrafy-dicom.service
+          # (sin unit file en el repo) — probablemente nombres configurados a
+          # mano en el Jetson real. Se intenta reiniciar cualquiera de los
+          # tres que exista en este equipo, y solo falla si ninguno lo hace.
+          restarted=0
+          for svc in hipocrafy-api.service hipocrafy-dicom.service hipocrafy-edge.service; do
+            if systemctl list-unit-files "$svc" --no-legend 2>/dev/null | grep -q "$svc"; then
+              echo "Reiniciando $svc..."
+              sudo systemctl restart "$svc"
+              restarted=$((restarted + 1))
+            else
+              echo "⚠️  $svc no existe en este equipo, se omite."
+            fi
+          done
+          if [ "$restarted" -eq 0 ]; then
+            echo "❌ Ningún servicio conocido existe en este Jetson — revisar nombres reales con 'systemctl list-units | grep hipocrafy'."
+            exit 1
+          fi
           sleep 3
 
       - name: Verify services are running
         run: |
-          echo "=== hipocrafy-api ==="
-          sudo systemctl is-active hipocrafy-api.service
-          echo "=== hipocrafy-dicom ==="
-          sudo systemctl is-active hipocrafy-dicom.service
+          for svc in hipocrafy-api.service hipocrafy-dicom.service hipocrafy-edge.service; do
+            if systemctl list-unit-files "$svc" --no-legend 2>/dev/null | grep -q "$svc"; then
+              echo "=== $svc ==="
+              sudo systemctl is-active "$svc" || true
+            fi
+          done

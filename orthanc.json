@@ -39,5 +39,9 @@
     "DicomWebRoot": "/dicom-web/"
   },
 
-  "StableAge": 10
+  "StableAge": 10,
+
+  "LuaScripts": [
+    "/etc/orthanc/scripts/webhook.lua"
+  ]
 }

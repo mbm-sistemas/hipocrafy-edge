@@ -416,10 +416,22 @@ async def process_and_sync(study_id: str):
 
             # Registrar estudio clínico
             response = await client.post(f"{CLOUD_URL}/studies", json=payload, headers=headers, timeout=15.0)
-            
+
             if response.status_code == 200:
                 logger.info("✅ Sincronización exitosa con la nube.")
                 update_sync_status(study_id, "synced")
+                # Hasta acá solo viajó UNA foto (la del medio) del estudio.
+                # Archivar el resto de la serie + extraer el cine-loop si lo
+                # trae corre aparte, en background, para no demorar la
+                # respuesta del webhook — la retención de Orthanc (24h por
+                # defecto) da margen de sobra para que esto termine antes de
+                # que el estudio se borre localmente.
+                try:
+                    backend_study_id = response.json().get("study_id")
+                    if backend_study_id:
+                        asyncio.create_task(_archive_study_instances(study_id, backend_study_id, headers))
+                except Exception as archive_err:
+                    logger.warning(f"No se pudo lanzar el archivado completo de instancias: {archive_err}")
             else:
                 logger.error(f"❌ Error en sincronización: {response.status_code} - {response.text}")
                 update_sync_status(study_id, "failed")
@@ -435,6 +447,135 @@ async def process_and_sync(study_id: str):
             update_sync_status(study_id, "error")
         except:
             pass
+
+
+async def _archive_study_instances(orthanc_study_id: str, backend_study_id: int, upload_headers: dict) -> int:
+    """
+    Baja TODAS las instancias del estudio desde Orthanc (no solo la del
+    medio, que es lo único que process_and_sync usa para el análisis de IA),
+    las anonimiza, detecta si son cine-loop y extrae un MP4 real cuando
+    corresponde, y sube cada instancia completa al backend central vía
+    POST /edge-gateway/studies/{id}/instances.
+
+    Corre en background (asyncio.create_task) para no demorar la respuesta
+    del webhook — el análisis de IA y la ficha del estudio ya viajaron antes
+    de esto, esto solo completa el archivo legal del estudio.
+    """
+    import io
+    import pydicom
+    import cine_extractor
+    from dicom_anonymizer import anonymize_dicom_dataset
+
+    try:
+        async with httpx.AsyncClient(auth=ORTHANC_AUTH, timeout=30.0) as client:
+            inst_resp = await client.get(f"{ORTHANC_URL}/studies/{orthanc_study_id}/instances")
+            instances = inst_resp.json() if inst_resp.status_code == 200 else []
+    except Exception as e:
+        logger.error(f"[archivo] No se pudieron listar instancias del estudio {orthanc_study_id}: {e}")
+        return 0
+
+    if not instances:
+        return 0
+
+    archived_ok = 0
+    with tempfile.TemporaryDirectory(prefix="hipocrafy_archive_") as tmp_dir:
+        for seq, inst in enumerate(instances):
+            instance_id = inst.get("ID")
+            if not instance_id:
+                continue
+
+            open_files = []
+            try:
+                async with httpx.AsyncClient(auth=ORTHANC_AUTH, timeout=60.0) as client:
+                    dicom_resp = await client.get(f"{ORTHANC_URL}/instances/{instance_id}/file")
+                if dicom_resp.status_code != 200:
+                    logger.warning(f"[archivo] No se pudo descargar la instancia {instance_id} de Orthanc.")
+                    continue
+
+                ds = pydicom.dcmread(io.BytesIO(dicom_resp.content))
+                instance_type, frame_count = cine_extractor.classify_instance(ds)
+
+                # Tags (nombre, DNI, UIDs) siempre se anonimizan. El pixel
+                # data también — el fix reciente en dicom_anonymizer hace
+                # esto correcto ahora para multi-frame (antes hubiera
+                # tratado el eje de frames como canales de color).
+                anonymize_dicom_dataset(ds, anonymize_pixels=True)
+
+                dicom_path = os.path.join(tmp_dir, f"{instance_id}.dcm")
+                pydicom.dcmwrite(dicom_path, ds)
+
+                video_path = None
+                fps_is_estimated = False
+                if instance_type in ("multiframe", "video"):
+                    candidate_video = os.path.join(tmp_dir, f"{instance_id}.mp4")
+                    result = cine_extractor.extract_video(ds, candidate_video)
+                    if result:
+                        video_path = candidate_video
+                        frame_count = result["frame_count"]
+                        fps_is_estimated = result["fps_is_estimated"]
+                    else:
+                        # No se pudo extraer un video real (falta ffmpeg,
+                        # transfer syntax no soportado, etc.) — se sube como
+                        # imagen, nunca se inventa un video.
+                        instance_type = "image"
+
+                preview_path = os.path.join(tmp_dir, f"{instance_id}_preview.jpg")
+                try:
+                    async with httpx.AsyncClient(auth=ORTHANC_AUTH, timeout=30.0) as client:
+                        preview_resp = await client.get(f"{ORTHANC_URL}/instances/{instance_id}/preview")
+                    with open(preview_path, "wb") as f:
+                        f.write(preview_resp.content)
+                except Exception as e:
+                    logger.warning(f"[archivo] Sin preview para {instance_id}, se omite la instancia: {e}")
+                    continue
+
+                files = {
+                    "dicom_file": (f"{instance_id}.dcm", open(dicom_path, "rb"), "application/dicom"),
+                    "preview_file": (f"{instance_id}.jpg", open(preview_path, "rb"), "image/jpeg"),
+                }
+                open_files.extend(f[1] for f in files.values())
+                if video_path:
+                    vf = open(video_path, "rb")
+                    open_files.append(vf)
+                    files["video_file"] = (f"{instance_id}.mp4", vf, "video/mp4")
+
+                data = {
+                    "instance_type": instance_type,
+                    "sequence_order": str(seq),
+                    "fps_is_estimated": "true" if fps_is_estimated else "false",
+                }
+                if instance_id:
+                    data["orthanc_instance_id"] = instance_id
+                for attr, key in (("SOPInstanceUID", "sop_instance_uid"),
+                                  ("SeriesInstanceUID", "series_instance_uid"),
+                                  ("StudyInstanceUID", "study_instance_uid")):
+                    val = str(getattr(ds, attr, "") or "")
+                    if val:
+                        data[key] = val
+                if frame_count:
+                    data["frame_count"] = str(frame_count)
+
+                async with httpx.AsyncClient(timeout=90.0) as client:
+                    resp = await client.post(
+                        f"{CLOUD_URL}/studies/{backend_study_id}/instances",
+                        data=data, files=files, headers=upload_headers,
+                    )
+
+                if resp.status_code == 201:
+                    archived_ok += 1
+                else:
+                    logger.warning(f"[archivo] Backend rechazó instancia {instance_id}: {resp.status_code} {resp.text[:300]}")
+            except Exception as e:
+                logger.error(f"[archivo] Error archivando instancia {instance_id}: {e}")
+            finally:
+                for f in open_files:
+                    try:
+                        f.close()
+                    except Exception:
+                        pass
+
+    logger.info(f"[archivo] Estudio Orthanc {orthanc_study_id} → backend #{backend_study_id}: {archived_ok}/{len(instances)} instancias archivadas completas.")
+    return archived_ok
 
 
 # ═══════════════════════════════════════════════════════════
