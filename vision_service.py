@@ -143,6 +143,22 @@ def analyze_study(
             if result and "error" not in result:
                 # Inyectamos la especialidad resuelta en los resultados
                 result["specialty"] = specialty
+
+                # Enriquecimiento con Agente Periférico de Calidad y Pre-informe Estructurado
+                try:
+                    from core.edge_diagnostic_agent import edge_agent
+                    prelim = result.get("hallazgos_principales") or result.get("finding") or str(result.get("organ_analysis", ""))
+                    audit_data = edge_agent.audit_and_generate_prereport(
+                        image_path=image_path,
+                        specialty=specialty,
+                        dicom_metadata=dicom_metadata,
+                        preliminary_findings=str(prelim)
+                    )
+                    result["auditoria_calidad"] = audit_data.get("auditoria_calidad")
+                    result["preinforme_estructurado"] = audit_data.get("preinforme_estructurado")
+                except Exception as ea:
+                    logger.warning(f"Error ejecutando EdgeDiagnosticAgent: {ea}")
+
                 if failed_engines:
                     # Al menos un motor falló antes — marcamos fallback para el reporte
                     result["_event_meta"] = {
