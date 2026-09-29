@@ -28,12 +28,22 @@ Abre una terminal en la carpeta del proyecto Edge:
 El equipo local consta de dos partes: El servidor PACS (Orthanc en Docker) y el motor de IA (FastAPI, Ollama, Langchain).
 
 **A. Preparación del Hardware Edge (Jetson Orin)**
-Si estás configurando un Jetson desde cero, asegúrate de tener **JetPack 6.2** instalado. Luego ejecuta el script de setup automático:
-```bash
-chmod +x setup_jetson.sh
-./setup_jetson.sh
-```
-*(Este script instalará Python, Ollama, descargará los modelos LLaMA 3 y Nomic, y configurará el entorno virtual).*
+Si estás configurando un Jetson desde cero, asegúrate de tener **JetPack 6.2** instalado. 
+
+1. **Configurar el Almacenamiento Estándar NVMe de 1 TB (Recomendado para Producción):**
+   Consulta la guía completa en [STORAGE_ARCHITECTURE_STANDARD.md](STORAGE_ARCHITECTURE_STANDARD.md). Para provisionar el disco NVMe de 1 TB, Docker en NVMe, Ollama y el swapfile de 16 GB automáticamente:
+   ```bash
+   chmod +x setup_nvme.sh
+   ./setup_nvme.sh
+   ```
+
+2. **Instalar dependencias del sistema y modelos de IA:**
+   Luego ejecuta el script de setup del entorno:
+   ```bash
+   chmod +x setup_jetson.sh
+   ./setup_jetson.sh
+   ```
+   *(Este script configurará Python venv, las dependencias de PyTorch/CUDA y ChromaDB).*
 
 **B. Levantar Orthanc (PACS)**
 En la consola, ejecuta:
