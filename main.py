@@ -1419,6 +1419,17 @@ async def local_deepseek_proxy(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
+@app.get("/app.html")
+async def get_copilot_app():
+    return FileResponse(os.path.join(BASE_DIR, "static", "copilot", "app.html"))
+
+
+@app.get("/copilot")
+async def get_copilot_view():
+    return FileResponse(os.path.join(BASE_DIR, "static", "copilot", "app.html"))
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8080)
